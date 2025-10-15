@@ -1,15 +1,14 @@
+# src/ui.py
+
 import pygame
-from settings import WHITE, BLACK
+from settings import BLACK, RED, GREEN
 
-class UI:
-    def __init__(self, screen):
-        self.screen = screen
-        self.font = pygame.font.SysFont(None, 24)
+def draw_status(screen, font, hearts, coins):
+    text = font.render(f"❤️: {hearts}    💰: {coins}", True, BLACK)
+    screen.blit(text, (10, 10))
 
-    def draw_text(self, text, x, y, color=WHITE):
-        surf = self.font.render(text, True, color)
-        self.screen.blit(surf, (x, y))
-
-    def render(self, score, lives):
-        self.draw_text(f"Score: {score}", 8, 8)
-        self.draw_text(f"Lives: {lives}", 8, 32)
+def draw_gameover(screen, font, message, color):
+    text = font.render(message, True, color)
+    screen.blit(text, (400 - text.get_width() // 2, 300))
+    pygame.display.flip()
+    pygame.time.wait(3000)
