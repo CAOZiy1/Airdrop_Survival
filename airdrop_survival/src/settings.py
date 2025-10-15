@@ -18,4 +18,4 @@ PLAYER_SPEED = 5
 
 # 投掷物设置
 DROP_SIZE = 30
-DROP_TYPES = ["bomb", "coin", "food"]
+DROP_TYPES = ["bomb", "coin", "health_pack"]

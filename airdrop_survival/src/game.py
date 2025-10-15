@@ -2,10 +2,11 @@
 
 import pygame
 import random
-from settings import WIDTH, HEIGHT, WHITE, BLACK
+from settings import WIDTH, HEIGHT, WHITE, BLACK, RED, GREEN
 from player import Player
 from drop import Drop
 from ui import draw_status, draw_gameover
+
 
 class Game:
     def __init__(self):
@@ -49,7 +50,7 @@ class Game:
                     self.hearts -= 1
                 elif drop.type == "coin":
                     self.coins += 1
-                elif drop.type == "food" and self.hearts < 3:
+                elif drop.type == "health_pack" and self.hearts < 3:
                     self.hearts += 1
                 self.drops.remove(drop)
             elif drop.y > HEIGHT:
