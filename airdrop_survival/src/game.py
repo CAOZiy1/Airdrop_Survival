@@ -7,6 +7,7 @@ from player import Player
 from drop import Drop
 from ui import draw_status, draw_gameover
 from settings import MAX_HUNGER, HUNGER_DECAY_SECONDS, COINS_PER_FOOD
+from settings import LEVELS, CAN_IMAGE
 
 
 class Game:
@@ -28,6 +29,26 @@ class Game:
         self.running = True
         # track start time (milliseconds)
         self.start_ticks = pygame.time.get_ticks()
+        # level state
+        self.level_index = 0
+        self.level = LEVELS[self.level_index] if LEVELS else None
+        self.level_end_time = self.start_ticks + (self.level['time_seconds'] * 1000) if self.level else None
+        self.level_active = True if self.level else False
+        # show level start hint for initial level
+        if self.level_active:
+            try:
+                from ui import draw_level_start_hint
+                # try to load reward image
+                reward = self.level.get('reward', {})
+                reward_img = None
+                import os
+                base = os.path.join(os.path.dirname(__file__), '..', 'assets')
+                p = os.path.join(base, reward.get('image', CAN_IMAGE))
+                if os.path.exists(p):
+                    reward_img = pygame.image.load(p).convert_alpha()
+                draw_level_start_hint(self.screen, self.font, self.level.get('coins_required', 0), reward.get('type', 'can'), reward_image=reward_img)
+            except Exception:
+                pass
         # visual feedback: coin pop effects as list of (x, y, start_ms, text)
         self.coin_pops = []
         # small font for coin pop text
@@ -45,8 +66,18 @@ class Game:
             # skip the regular draw/flip so we don't render a normal player frame.
             if not self.running:
                 break
-            self.draw()
-            pygame.display.flip()
+            try:
+                self.draw()
+                pygame.display.flip()
+            except pygame.error as e:
+                # If the display surface was quit (window closed) we should exit cleanly.
+                msg = str(e).lower()
+                if 'display surface quit' in msg or 'video system not initialized' in msg:
+                    self.running = False
+                    break
+                else:
+                    # re-raise unexpected pygame errors
+                    raise
         pygame.quit()
 
     def handle_events(self):
@@ -74,7 +105,13 @@ class Game:
         decrease = (elapsed_seconds / 60.0) * DROP_SPAWN_DECREASE_PER_MIN
         interval = max(DROP_SPAWN_INTERVAL_MIN, int(DROP_SPAWN_INTERVAL_BASE - decrease))
         if random.randint(1, interval) == 1:
-            self.drops.append(Drop(elapsed_seconds=elapsed_seconds))
+            # compute per-level speed multiplier (level 0 -> 1.0)
+            try:
+                from settings import LEVEL_SPEED_INCREASE_PER_LEVEL
+                level_mult = 1.0 + (self.level_index * LEVEL_SPEED_INCREASE_PER_LEVEL) if hasattr(self, 'level_index') else 1.0
+            except Exception:
+                level_mult = 1.0
+            self.drops.append(Drop(elapsed_seconds=elapsed_seconds, level_speed_multiplier=level_mult))
 
         for drop in self.drops[:]:
             drop.update()
@@ -107,6 +144,68 @@ class Game:
             # schedule next decay
             self.next_hunger_decay = now + int(HUNGER_DECAY_SECONDS * 1000)
 
+        # Level timer check: if level active and time reached, evaluate outcome
+        if self.level_active and self.level_end_time is not None and now >= self.level_end_time:
+            # determine success if coins >= required
+            coins_required = self.level.get('coins_required', 0)
+            reward = self.level.get('reward', {})
+            from ui import draw_level_result
+            # try to load reward image from assets
+            reward_img = None
+            try:
+                import os
+                base = os.path.join(os.path.dirname(__file__), '..', 'assets')
+                p = os.path.join(base, reward.get('image', CAN_IMAGE))
+                if os.path.exists(p):
+                    reward_img = pygame.image.load(p).convert_alpha()
+            except Exception:
+                reward_img = None
+
+            if self.coins >= coins_required:
+                # success: consume coins and grant hunger restore if configured
+                self.coins -= coins_required
+                hunger_gain = reward.get('hunger_restore', 0)
+                if hunger_gain:
+                    self.hunger = min(MAX_HUNGER, self.hunger + hunger_gain)
+                # show success UI with can image
+                draw_level_result(self.screen, self.font, f"恭喜！获得 {reward.get('type', '奖励')}", success=True, reward_image=reward_img)
+                # advance to next level if available
+                if self.level_index + 1 < len(LEVELS):
+                    self.level_index += 1
+                    self.level = LEVELS[self.level_index]
+                    # reset timers: start_ticks and level_end_time based on now
+                    self.start_ticks = pygame.time.get_ticks()
+                    self.level_end_time = self.start_ticks + (self.level['time_seconds'] * 1000)
+                    self.level_active = True
+                    # clear drops to give the player a fresh start for next level
+                    self.drops.clear()
+                    # show level start hint for the new level
+                    try:
+                        from ui import draw_level_start_hint
+                        reward = self.level.get('reward', {})
+                        reward_img = None
+                        import os
+                        base = os.path.join(os.path.dirname(__file__), '..', 'assets')
+                        p = os.path.join(base, reward.get('image', CAN_IMAGE))
+                        if os.path.exists(p):
+                            reward_img = pygame.image.load(p).convert_alpha()
+                        draw_level_start_hint(self.screen, self.font, self.level.get('coins_required', 0), reward.get('type', 'can'), reward_image=reward_img)
+                    except Exception:
+                        pass
+                else:
+                    # no more levels: victory
+                    draw_gameover(self.screen, self.font, "Victory! You cleared all levels!", GREEN)
+                    self.running = False
+                    return
+            else:
+                # failure: player starves (set hunger to 0) and show message
+                self.hunger = 0
+                draw_level_result(self.screen, self.font, "时间到！钱不够，被饿死了。", success=False, reward_image=None)
+                self.level_active = False
+                # show game over after failure
+                draw_gameover(self.screen, self.font, "Game Over - You Starved", (255, 0, 0))
+                self.running = False
+                return
         if self.hearts <= 0:
             # set dead overlay and show a rising halo above the player
             # total death display target: ~7000ms (animation + final pause)
@@ -222,7 +321,19 @@ class Game:
         self.player.draw(self.screen, BLACK)
         for drop in self.drops:
             drop.draw(self.screen)
+        # compute remaining level time if active
+        time_left = None
+        if self.level_active and self.level_end_time is not None:
+            ms_left = max(0, self.level_end_time - pygame.time.get_ticks())
+            time_left = int(ms_left / 1000)
         draw_status(self.screen, self.font, self.hearts, self.coins, self.hunger)
+        # show centered countdown message about starvation
+        if time_left is not None:
+            try:
+                from ui import draw_center_countdown
+                draw_center_countdown(self.screen, self.font, time_left)
+            except Exception:
+                pass
         # draw coin pop effects
         now = pygame.time.get_ticks()
         COIN_POP_DURATION = 800

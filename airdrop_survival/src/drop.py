@@ -4,6 +4,7 @@ import pygame
 import random
 import os
 from settings import WIDTH, DROP_SIZE, DROP_TYPES, DROP_WEIGHTS, DROP_BASE_SPEED_MIN, DROP_BASE_SPEED_MAX, DROP_SPEED_INCREASE_PER_MIN, BOMB_SPEED_MULTIPLIER, DROP_TIME_SCALE_START, DROP_TIME_SCALE_RAMP_SEC, DROP_TIME_STAGE1_SEC, DROP_TIME_STAGE1_SCALE
+from settings import USE_PER_TYPE_SPEED_MULTIPLIERS, COIN_SPEED_MULTIPLIER, HEALTH_SPEED_MULTIPLIER
 
 # Module-level image cache
 _IMG_BOMB = None
@@ -44,7 +45,7 @@ def _load_images():
 
 
 class Drop:
-    def __init__(self, elapsed_seconds=0):
+    def __init__(self, elapsed_seconds=0, level_speed_multiplier=1.0):
         if _IMG_BOMB is None and _IMG_COIN is None and _IMG_HEALTH is None:
             _load_images()
 
@@ -76,12 +77,25 @@ class Drop:
             self.type = random.choices(DROP_TYPES, weights=DROP_WEIGHTS, k=1)[0]
         except Exception:
             self.type = random.choice(DROP_TYPES)
-        # apply bomb speed multiplier if this drop is a bomb
-        if self.type == "bomb":
-            try:
+        # apply configured multipliers: either per-type or a single global multiplier
+        try:
+            if USE_PER_TYPE_SPEED_MULTIPLIERS:
+                if self.type == 'coin':
+                    self.speed *= COIN_SPEED_MULTIPLIER
+                elif self.type == 'health_pack':
+                    self.speed *= HEALTH_SPEED_MULTIPLIER
+                else:
+                    self.speed *= BOMB_SPEED_MULTIPLIER
+            else:
+                # legacy: apply single bomb multiplier to all
                 self.speed *= BOMB_SPEED_MULTIPLIER
-            except Exception:
-                pass
+        except Exception:
+            pass
+        # apply per-level multiplier last so it scales the final speed
+        try:
+            self.speed *= float(level_speed_multiplier)
+        except Exception:
+            pass
         self.rect = pygame.Rect(self.x, self.y, DROP_SIZE, DROP_SIZE)
 
     def update(self):

@@ -2,7 +2,7 @@
 
 import pygame
 import os
-from settings import BLACK, RED, GREEN, WIDTH, MAX_HUNGER, COINS_PER_FOOD, MAX_HEALTH
+from settings import BLACK, RED, GREEN, WIDTH, HEIGHT, MAX_HUNGER, COINS_PER_FOOD, MAX_HEALTH
 
 # Cached icon surfaces
 _HEART_ICON = None
@@ -12,6 +12,7 @@ _IMG_HEALTH = None
 _IMG_STOMACH = None
 _STOMACH_ICON = None
 _IMG_BACKGROUND = None
+_IMG_CAN = None
 
 def _load_status_images():
     global _IMG_COIN, _IMG_HEALTH
@@ -46,6 +47,15 @@ def _load_status_images():
     _IMG_HEALTH = _try_load_alpha(['heart_icon.png', 'heart.png', 'life_icon.png', 'health_pack.png'])
     # stomach image: accept stomach.png or stomach_icon.png
     _IMG_STOMACH = _try_load_alpha(['stomach.png', 'stomach_icon.png'])
+    # can image for level reward
+    try:
+        can_path = os.path.join(base, 'can.png')
+        if os.path.exists(can_path):
+            _IMG_CAN = pygame.image.load(can_path).convert_alpha()
+        else:
+            _IMG_CAN = None
+    except Exception:
+        _IMG_CAN = None
 
 def _create_icons(size=24):
     """Create simple heart and coin icon surfaces.
@@ -78,7 +88,7 @@ def _create_icons(size=24):
     return heart, coin
 
 
-def draw_status(screen, font, hearts, coins, hunger=None):
+def draw_status(screen, font, hearts, coins, hunger=None, time_left_seconds=None):
     global _HEART_ICON, _COIN_ICON
     global _IMG_COIN, _IMG_HEALTH
     if _IMG_COIN is None and _IMG_HEALTH is None:
@@ -125,36 +135,9 @@ def draw_status(screen, font, hearts, coins, hunger=None):
     text2 = font.render(str(coins), True, BLACK)
     screen.blit(text2, (x2 + _COIN_ICON.get_width() + 4, y + (_COIN_ICON.get_height() - text2.get_height()) // 2))
 
-    # If hunger provided, draw stomach icons to the right of coins
-    if hunger is None:
-        hunger = MAX_HUNGER
+    # Hunger is now shown as a single icon beside the top countdown; we no longer render multiple stomach icons here.
 
-    x3 = x2 + _COIN_ICON.get_width() + text2.get_width() + padding * 2
-    # prefer image if available
-    stomach_width = _COIN_ICON.get_width()
-    stomach_height = _COIN_ICON.get_height()
-    for i in range(MAX_HUNGER):
-        pos_x = x3 + i * (stomach_width + 4)
-        if _IMG_STOMACH:
-            s = pygame.transform.smoothscale(_IMG_STOMACH, (stomach_width, stomach_height))
-            if i < hunger:
-                screen.blit(s, (pos_x, y))
-            else:
-                # draw dimmed for empty stomach
-                tmp = s.copy()
-                tmp.fill((60, 60, 60, 140), special_flags=pygame.BLEND_RGBA_MULT)
-                screen.blit(tmp, (pos_x, y))
-        else:
-            # fallback: draw a simple stomach-like ellipse
-            stomach_surf = pygame.Surface((stomach_width, stomach_height), pygame.SRCALPHA)
-            color_full = (100, 150, 200)
-            color_empty = (120, 120, 120)
-            pygame.draw.ellipse(stomach_surf, color_full if i < hunger else color_empty, (0, 0, stomach_width, stomach_height))
-            screen.blit(stomach_surf, (pos_x, y))
-
-    # small hint for buying food: key 'F' spends coins to buy food
-    hint = font.render(f"F: {COINS_PER_FOOD} coins -> +1 food", True, BLACK)
-    screen.blit(hint, (WIDTH - hint.get_width() - 10, y + (_HEART_ICON.get_height() - hint.get_height()) // 2))
+    # (time display moved to centered message; draw_status no longer renders it)
 
 
 def draw_gameover(screen, font, message, color):
@@ -162,6 +145,55 @@ def draw_gameover(screen, font, message, color):
     screen.blit(text, (400 - text.get_width() // 2, 300))
     pygame.display.flip()
     pygame.time.wait(3000)
+
+
+def draw_level_result(screen, font, message, success=True, reward_image=None):
+    """Display an end-of-level message. If success, show the reward_image (surface or None).
+
+    Blocks briefly to let the player read the message.
+    """
+    # darken background slightly
+    overlay = pygame.Surface((WIDTH, HEIGHT)).convert_alpha()
+    overlay.fill((0, 0, 0, 180))
+    screen.blit(overlay, (0, 0))
+
+    color = GREEN if success else RED
+    text = font.render(message, True, color)
+    screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - 40))
+
+    if success and reward_image is not None:
+        try:
+            img_s = pygame.transform.smoothscale(reward_image, (96, 96))
+            screen.blit(img_s, (WIDTH // 2 - img_s.get_width() // 2, HEIGHT // 2 + 10))
+        except Exception:
+            pass
+
+    pygame.display.flip()
+    pygame.time.wait(2500)
+
+
+def draw_level_start_hint(screen, font, coins_required, reward_text, reward_image=None, duration_ms=2000):
+    """Show a brief level-start hint like '30 coins for a can' with optional image.
+
+    Blocks for duration_ms milliseconds to ensure player sees the objective.
+    """
+    overlay = pygame.Surface((WIDTH, HEIGHT)).convert_alpha()
+    overlay.fill((0, 0, 0, 160))
+    screen.blit(overlay, (0, 0))
+
+    text = f"{coins_required} coins for {reward_text}"
+    txt = font.render(text, True, (255, 230, 180))
+    screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 30))
+
+    if reward_image is not None:
+        try:
+            img_s = pygame.transform.smoothscale(reward_image, (72, 72))
+            screen.blit(img_s, (WIDTH // 2 - img_s.get_width() // 2, HEIGHT // 2 + 10))
+        except Exception:
+            pass
+
+    pygame.display.flip()
+    pygame.time.wait(duration_ms)
 
 
 def draw_background(screen, width, height):
@@ -197,3 +229,31 @@ def draw_background(screen, width, height):
 
     # Ground
     pygame.draw.rect(screen, ground_color, (0, sky_height, width, height - sky_height))
+
+
+def draw_center_countdown(screen, font, seconds_left):
+    """Draw a centered countdown message in English: 'XX seconds until starvation'"""
+    try:
+        text = f"{seconds_left} seconds until starvation"
+        txt = font.render(text, True, (10, 10, 10))
+        # render a small stomach icon to the left of the text for clarity
+        icon_size = 20
+        gap = 8
+        # compute combined width (icon + gap + text)
+        total_w = icon_size + gap + txt.get_width()
+        x0 = WIDTH // 2 - total_w // 2
+        y = 10
+        # draw icon
+        if _IMG_STOMACH:
+            try:
+                icon_s = pygame.transform.smoothscale(_IMG_STOMACH, (icon_size, icon_size))
+                screen.blit(icon_s, (x0, y + (txt.get_height() - icon_size) // 2))
+            except Exception:
+                # fallback to simple ellipse
+                pygame.draw.ellipse(screen, (100, 150, 200), (x0, y + (txt.get_height() - icon_size) // 2, icon_size, icon_size))
+        else:
+            pygame.draw.ellipse(screen, (100, 150, 200), (x0, y + (txt.get_height() - icon_size) // 2, icon_size, icon_size))
+        # draw text to the right of the icon
+        screen.blit(txt, (x0 + icon_size + gap, y))
+    except Exception:
+        pass
