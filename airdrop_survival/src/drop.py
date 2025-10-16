@@ -3,7 +3,7 @@
 import pygame
 import random
 import os
-from settings import WIDTH, DROP_SIZE, DROP_TYPES, DROP_WEIGHTS
+from settings import WIDTH, DROP_SIZE, DROP_TYPES, DROP_WEIGHTS, DROP_BASE_SPEED_MIN, DROP_BASE_SPEED_MAX, DROP_SPEED_INCREASE_PER_MIN, BOMB_SPEED_MULTIPLIER
 
 # Module-level image cache
 _IMG_BOMB = None
@@ -44,18 +44,27 @@ def _load_images():
 
 
 class Drop:
-    def __init__(self):
+    def __init__(self, elapsed_seconds=0):
         if _IMG_BOMB is None and _IMG_COIN is None and _IMG_HEALTH is None:
             _load_images()
 
         self.x = random.randint(0, WIDTH - DROP_SIZE)
         self.y = 0
-        self.speed = random.randint(3, 6)
+        # base speed random in range, then increase with elapsed minutes
+        base = random.uniform(DROP_BASE_SPEED_MIN, DROP_BASE_SPEED_MAX)
+        increase = (elapsed_seconds / 60.0) * DROP_SPEED_INCREASE_PER_MIN
+        self.speed = base + increase
         try:
             # use weighted random choices if weights are provided
             self.type = random.choices(DROP_TYPES, weights=DROP_WEIGHTS, k=1)[0]
         except Exception:
             self.type = random.choice(DROP_TYPES)
+        # apply bomb speed multiplier if this drop is a bomb
+        if self.type == "bomb":
+            try:
+                self.speed *= BOMB_SPEED_MULTIPLIER
+            except Exception:
+                pass
         self.rect = pygame.Rect(self.x, self.y, DROP_SIZE, DROP_SIZE)
 
     def update(self):

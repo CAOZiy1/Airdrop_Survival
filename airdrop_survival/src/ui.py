@@ -102,3 +102,28 @@ def draw_gameover(screen, font, message, color):
     screen.blit(text, (400 - text.get_width() // 2, 300))
     pygame.display.flip()
     pygame.time.wait(3000)
+
+
+def draw_background(screen, width, height):
+    """Draw a simple vertical sky gradient and ground rectangle.
+
+    - Sky: gradient from light blue to deep blue (top to middle)
+    - Ground: solid green band at the bottom
+    """
+    # Colors
+    top_color = (135, 206, 250)   # light sky blue
+    mid_color = (70, 130, 180)    # steel blue
+    ground_color = (34, 139, 34)  # forest green
+
+    sky_height = int(height * 0.75)
+
+    # Draw sky gradient: top -> mid over sky_height
+    for y in range(sky_height):
+        t = y / max(sky_height - 1, 1)
+        r = int(top_color[0] * (1 - t) + mid_color[0] * t)
+        g = int(top_color[1] * (1 - t) + mid_color[1] * t)
+        b = int(top_color[2] * (1 - t) + mid_color[2] * t)
+        pygame.draw.line(screen, (r, g, b), (0, y), (width, y))
+
+    # Ground
+    pygame.draw.rect(screen, ground_color, (0, sky_height, width, height - sky_height))
