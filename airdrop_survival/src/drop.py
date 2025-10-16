@@ -15,16 +15,31 @@ def _load_images():
     base = os.path.join(os.path.dirname(__file__), '..', 'assets')
     base = os.path.normpath(base)
     try:
-        _IMG_BOMB = pygame.image.load(os.path.join(base, 'bomb.png')).convert_alpha()
+        p = os.path.join(base, 'bomb.png')
+        print(f"drop: loading bomb image from {p}")
+        _IMG_BOMB = pygame.image.load(p).convert_alpha()
     except Exception:
+        import traceback
+        print(f"drop: failed loading bomb image from {p}")
+        traceback.print_exc()
         _IMG_BOMB = None
     try:
-        _IMG_COIN = pygame.image.load(os.path.join(base, 'coin.png')).convert_alpha()
+        p = os.path.join(base, 'coin.png')
+        print(f"drop: loading coin image from {p}")
+        _IMG_COIN = pygame.image.load(p).convert_alpha()
     except Exception:
+        import traceback
+        print(f"drop: failed loading coin image from {p}")
+        traceback.print_exc()
         _IMG_COIN = None
     try:
-        _IMG_HEALTH = pygame.image.load(os.path.join(base, 'health_pack.png')).convert_alpha()
+        p = os.path.join(base, 'health_pack.png')
+        print(f"drop: loading health image from {p}")
+        _IMG_HEALTH = pygame.image.load(p).convert_alpha()
     except Exception:
+        import traceback
+        print(f"drop: failed loading health image from {p}")
+        traceback.print_exc()
         _IMG_HEALTH = None
 
 

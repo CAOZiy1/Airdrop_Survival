@@ -15,12 +15,22 @@ def _load_status_images():
     base = os.path.join(os.path.dirname(__file__), '..', 'assets')
     base = os.path.normpath(base)
     try:
-        _IMG_COIN = pygame.image.load(os.path.join(base, 'coin.png')).convert_alpha()
+        p = os.path.join(base, 'coin.png')
+        print(f"ui: loading coin image from {p}")
+        _IMG_COIN = pygame.image.load(p).convert_alpha()
     except Exception:
+        import traceback
+        print(f"ui: failed loading coin image from {p}")
+        traceback.print_exc()
         _IMG_COIN = None
     try:
-        _IMG_HEALTH = pygame.image.load(os.path.join(base, 'health_pack.png')).convert_alpha()
+        p = os.path.join(base, 'health_pack.png')
+        print(f"ui: loading health image from {p}")
+        _IMG_HEALTH = pygame.image.load(p).convert_alpha()
     except Exception:
+        import traceback
+        print(f"ui: failed loading health image from {p}")
+        traceback.print_exc()
         _IMG_HEALTH = None
 
 def _create_icons(size=24):
