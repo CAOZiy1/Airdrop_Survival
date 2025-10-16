@@ -3,7 +3,7 @@
 import pygame
 import random
 import os
-from settings import WIDTH, DROP_SIZE, DROP_TYPES, DROP_WEIGHTS, DROP_BASE_SPEED_MIN, DROP_BASE_SPEED_MAX, DROP_SPEED_INCREASE_PER_MIN, BOMB_SPEED_MULTIPLIER
+from settings import WIDTH, DROP_SIZE, DROP_TYPES, DROP_WEIGHTS, DROP_BASE_SPEED_MIN, DROP_BASE_SPEED_MAX, DROP_SPEED_INCREASE_PER_MIN, BOMB_SPEED_MULTIPLIER, DROP_TIME_SCALE_START, DROP_TIME_SCALE_RAMP_SEC, DROP_TIME_STAGE1_SEC, DROP_TIME_STAGE1_SCALE
 
 # Module-level image cache
 _IMG_BOMB = None
@@ -53,7 +53,24 @@ class Drop:
         # base speed random in range, then increase with elapsed minutes
         base = random.uniform(DROP_BASE_SPEED_MIN, DROP_BASE_SPEED_MAX)
         increase = (elapsed_seconds / 60.0) * DROP_SPEED_INCREASE_PER_MIN
-        self.speed = base + increase
+        # apply time-scaling: start slightly slower, ramp to 1.0 by DROP_TIME_SCALE_RAMP_SEC
+        time_scale = 1.0
+        try:
+            # piecewise: stage1 constant scale, then ramp from stage1_scale -> DROP_TIME_SCALE_START -> 1.0
+            if elapsed_seconds <= DROP_TIME_STAGE1_SEC:
+                time_scale = DROP_TIME_STAGE1_SCALE
+            else:
+                # after stage1, interpolate between DROP_TIME_SCALE_START and 1.0 over remaining ramp
+                if DROP_TIME_SCALE_RAMP_SEC > DROP_TIME_STAGE1_SEC:
+                    t_after = max(0.0, elapsed_seconds - DROP_TIME_STAGE1_SEC)
+                    ramp_duration = float(DROP_TIME_SCALE_RAMP_SEC - DROP_TIME_STAGE1_SEC)
+                    frac_t = min(1.0, t_after / ramp_duration) if ramp_duration > 0 else 1.0
+                    time_scale = DROP_TIME_SCALE_START + (1.0 - DROP_TIME_SCALE_START) * frac_t
+                else:
+                    time_scale = 1.0
+        except Exception:
+            time_scale = 1.0
+        self.speed = (base + increase) * time_scale
         try:
             # use weighted random choices if weights are provided
             self.type = random.choices(DROP_TYPES, weights=DROP_WEIGHTS, k=1)[0]

@@ -85,7 +85,8 @@ class Game:
             DEATH_MS = 10000
             self.player.set_dead(DEATH_MS / 1000)
             start = pygame.time.get_ticks()
-            # animation loop for death duration
+            # animation loop for death duration; halo rises faster than total death time
+            HALO_RISE_MS = 5000
             while pygame.time.get_ticks() - start < DEATH_MS:
                 # pump events so window remains responsive
                 for event in pygame.event.get():
@@ -105,19 +106,25 @@ class Game:
 
                 # halo animation: rises from player's head upward over the death duration
                 now = pygame.time.get_ticks()
+                # overall fraction for death (0..1)
                 frac = (now - start) / float(DEATH_MS)
                 # halo parameters
-                halo_max_rise = 70
-                halo_y = self.player.rect.top - int(frac * halo_max_rise) - 10
                 halo_x = self.player.rect.centerx
+                # halo rise fraction completes by HALO_RISE_MS
+                halo_frac = min(1.0, (now - start) / float(HALO_RISE_MS))
+                halo_max_rise = 50
+                halo_y = self.player.rect.top - int(halo_frac * halo_max_rise) - 6
+                # halo fades slightly based on overall death frac
                 halo_alpha = max(0, 255 - int(frac * 255))
-                halo_size = int(self.player.rect.width * (0.6 + 0.4 * (1 - frac)))
-                # draw halo as a ring on a temp surface with per-pixel alpha
+                # make halo smaller than player: 40% of player width down to 25% over halo_frac
+                halo_size = int(self.player.rect.width * (0.4 - 0.15 * halo_frac))
+                halo_size = max(8, halo_size)
+                # draw halo as a smaller ring on a temp surface with per-pixel alpha
                 halo_surf = pygame.Surface((halo_size * 2, halo_size // 2), pygame.SRCALPHA)
                 ring_rect = halo_surf.get_rect(center=(halo_size, halo_size // 4))
                 # ring color (gold) with computed alpha
                 ring_color = (255, 230, 120, halo_alpha)
-                pygame.draw.ellipse(halo_surf, ring_color, ring_rect, width=max(2, halo_size // 8))
+                pygame.draw.ellipse(halo_surf, ring_color, ring_rect, width=max(1, halo_size // 10))
                 self.screen.blit(halo_surf, (halo_x - halo_surf.get_width() // 2, halo_y - halo_surf.get_height() // 2))
 
                 pygame.display.flip()
