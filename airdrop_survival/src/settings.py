@@ -13,7 +13,7 @@ GREEN = (0, 255, 0)
 
 # 玩家设置
 PLAYER_WIDTH = 90
-PLAYER_HEIGHT = 90
+PLAYER_HEIGHT = 120
 PLAYER_SPEED = 5
 
 # Maximum health (number of hearts shown)
