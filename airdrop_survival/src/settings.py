@@ -12,10 +12,13 @@ GOLD = (255, 215, 0)
 GREEN = (0, 255, 0)
 
 # 玩家设置
-PLAYER_WIDTH = 50
-PLAYER_HEIGHT = 50
+PLAYER_WIDTH = 64
+PLAYER_HEIGHT = 64
 PLAYER_SPEED = 5
 
 # 投掷物设置
-DROP_SIZE = 30
+DROP_SIZE = 48
 DROP_TYPES = ["bomb", "coin", "health_pack"]
+# Weights for DROP_TYPES selection. Higher means more likely.
+# Default suggestion: bombs more frequent, coins medium, health packs rare.
+DROP_WEIGHTS = [8, 3, 1]

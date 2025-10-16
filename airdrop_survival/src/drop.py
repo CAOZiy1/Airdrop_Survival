@@ -3,7 +3,7 @@
 import pygame
 import random
 import os
-from settings import WIDTH, DROP_SIZE, DROP_TYPES
+from settings import WIDTH, DROP_SIZE, DROP_TYPES, DROP_WEIGHTS
 
 # Module-level image cache
 _IMG_BOMB = None
@@ -51,7 +51,11 @@ class Drop:
         self.x = random.randint(0, WIDTH - DROP_SIZE)
         self.y = 0
         self.speed = random.randint(3, 6)
-        self.type = random.choice(DROP_TYPES)
+        try:
+            # use weighted random choices if weights are provided
+            self.type = random.choices(DROP_TYPES, weights=DROP_WEIGHTS, k=1)[0]
+        except Exception:
+            self.type = random.choice(DROP_TYPES)
         self.rect = pygame.Rect(self.x, self.y, DROP_SIZE, DROP_SIZE)
 
     def update(self):
