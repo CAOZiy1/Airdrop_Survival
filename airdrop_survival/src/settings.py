@@ -16,6 +16,9 @@ PLAYER_WIDTH = 90
 PLAYER_HEIGHT = 90
 PLAYER_SPEED = 5
 
+# Maximum health (number of hearts shown)
+MAX_HEALTH = 3
+
 # 投掷物设置
 DROP_SIZE = 48
 DROP_TYPES = ["bomb", "coin", "health_pack"]
@@ -52,3 +55,11 @@ DROP_SPAWN_INTERVAL_BASE = 30
 DROP_SPAWN_INTERVAL_MIN = 8
 # Decrease the interval by this many units per minute (so smaller => more frequent)
 DROP_SPAWN_DECREASE_PER_MIN = 3
+
+# Hunger / economy settings
+# Maximum hunger units (displayed as stomach icons)
+MAX_HUNGER = 3
+# Seconds between automatic hunger decay (player gets hungrier over time)
+HUNGER_DECAY_SECONDS = 20
+# Number of coins required to buy 1 food unit
+COINS_PER_FOOD = 5
