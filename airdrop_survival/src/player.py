@@ -3,6 +3,7 @@
 import pygame
 import os
 from settings import PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_SPEED, HEIGHT
+from settings import PLAYER_DRAW_SCALE, PLAYER_OUTLINE, PLAYER_OUTLINE_COLOR, PLAYER_OUTLINE_WIDTH, PLAYER_VERTICAL_RAISE
 
 _PLAYER_IMG = None
 _HURT_IMG = None
@@ -35,7 +36,9 @@ def _load_player_images():
 
 class Player:
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, PLAYER_WIDTH, PLAYER_HEIGHT)
+        # apply a small vertical raise so the player appears higher on screen
+        # (this only shifts the rect's y; collision rect remains the same size)
+        self.rect = pygame.Rect(x, y - PLAYER_VERTICAL_RAISE, PLAYER_WIDTH, PLAYER_HEIGHT)
         if _PLAYER_IMG is None and _HURT_IMG is None and _DEAD_IMG is None:
             _load_player_images()
 
@@ -70,12 +73,32 @@ class Player:
             # preserve aspect ratio: scale sprite to fit inside rect
             iw, ih = sprite.get_width(), sprite.get_height()
             rw, rh = self.rect.width, self.rect.height
-            scale = min(rw / iw, rh / ih)
+            # apply draw-scale multiplier so sprite can be visually larger than collision rect
+            scale = min(rw / iw, rh / ih) * PLAYER_DRAW_SCALE
             target_w = max(1, int(iw * scale))
             target_h = max(1, int(ih * scale))
             surf = pygame.transform.smoothscale(sprite, (target_w, target_h))
             # center the sprite on the player's rect
             dest = surf.get_rect(center=self.rect.center)
+            # optional outline: draw a slightly enlarged filled version behind the sprite
+            if PLAYER_OUTLINE:
+                try:
+                    outline_surf = pygame.Surface((surf.get_width() + PLAYER_OUTLINE_WIDTH * 2, surf.get_height() + PLAYER_OUTLINE_WIDTH * 2), pygame.SRCALPHA)
+                    # draw the sprite's alpha as a mask by blitting the sprite multiple times in the outline color
+                    mask = surf.copy()
+                    mask.fill(PLAYER_OUTLINE_COLOR + (0,), special_flags=pygame.BLEND_RGBA_MULT)
+                    # draw multiple shifted blits to create a solid outline
+                    ox, oy = PLAYER_OUTLINE_WIDTH, PLAYER_OUTLINE_WIDTH
+                    for dx in range(-PLAYER_OUTLINE_WIDTH, PLAYER_OUTLINE_WIDTH + 1, max(1, PLAYER_OUTLINE_WIDTH)):
+                        for dy in range(-PLAYER_OUTLINE_WIDTH, PLAYER_OUTLINE_WIDTH + 1, max(1, PLAYER_OUTLINE_WIDTH)):
+                            outline_surf.blit(mask, (ox + dx, oy + dy))
+                    # then blit the outline and the sprite onto the screen
+                    outline_pos = (dest.left - PLAYER_OUTLINE_WIDTH, dest.top - PLAYER_OUTLINE_WIDTH)
+                    screen.blit(outline_surf, outline_pos)
+                except Exception:
+                    # fallback: draw a simple rect behind the player
+                    back = pygame.Rect(dest.left - PLAYER_OUTLINE_WIDTH, dest.top - PLAYER_OUTLINE_WIDTH, surf.get_width() + PLAYER_OUTLINE_WIDTH * 2, surf.get_height() + PLAYER_OUTLINE_WIDTH * 2)
+                    pygame.draw.rect(screen, PLAYER_OUTLINE_COLOR, back)
             screen.blit(surf, dest.topleft)
         else:
             pygame.draw.rect(screen, color, self.rect)

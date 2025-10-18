@@ -13,8 +13,18 @@ GREEN = (0, 255, 0)
 
 # 玩家设置
 PLAYER_WIDTH = 90
-PLAYER_HEIGHT = 120
+PLAYER_HEIGHT = 90
 PLAYER_SPEED = 5
+
+# Visual tuning for player rendering (does not change collision rect)
+# Multiply the drawn sprite size by this factor (1.0 = draw at rect size)
+PLAYER_DRAW_SCALE = 1.25
+# Draw an outline around the player sprite to improve contrast against background
+PLAYER_OUTLINE = True
+PLAYER_OUTLINE_COLOR = (0, 0, 0)
+PLAYER_OUTLINE_WIDTH = 2
+# Vertical raise in pixels from the bottom when spawning the player (higher => player appears higher)
+PLAYER_VERTICAL_RAISE = 25
 
 # Maximum health (number of hearts shown)
 MAX_HEALTH = 3
@@ -99,3 +109,11 @@ LEVELS = [
 
 # Name of can image in assets (UI will try to load this)
 CAN_IMAGE = 'can.png'
+
+# Intro animation tuning
+# If True, the plane will pause at each drop node so drops have time to fall
+INTRO_DROP_PAUSE = True
+# Pause duration in milliseconds when the plane reaches a drop node
+INTRO_DROP_PAUSE_MS = 600
+# Advance drop triggers by this many pixels (positive = trigger earlier)
+INTRO_DROP_TRIGGER_ADVANCE = 160

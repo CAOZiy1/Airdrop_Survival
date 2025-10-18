@@ -10,7 +10,7 @@ Behavior:
 import os
 import pygame
 from ui import draw_background
-from settings import WIDTH, HEIGHT
+from settings import WIDTH, HEIGHT, DROP_SIZE, INTRO_DROP_PAUSE, INTRO_DROP_PAUSE_MS, INTRO_DROP_TRIGGER_ADVANCE
 
 
 def _load_asset(name):
@@ -49,15 +49,19 @@ class Intro:
             plane = pygame.Surface((140, 80), pygame.SRCALPHA)
             pygame.draw.polygon(plane, (40, 120, 140), [(0, 40), (110, 10), (130, 40), (110, 70)])
         # scale plane down so it flies in the sky area (smaller than player)
-        SCALE = 0.6
+        # changed to 0.3 to use 30% of original size and placed at the very top of the screen
+        SCALE = 0.3
         plane = pygame.transform.smoothscale(plane, (int(plane.get_width() * SCALE), int(plane.get_height() * SCALE)))
         plane_w, plane_h = plane.get_width(), plane.get_height()
         plane_x = -plane_w
-        # position plane higher in the sky (above UI/status area)
-        plane_y = 40
-        plane_speed = 4
+        # position plane at the very top of the screen
+        plane_y = 0
+        plane_speed = 3
 
-        dropped = False
+        # three-stage drop flags: enter, middle, before exit
+        dropped_stage1 = False
+        dropped_stage2 = False
+        dropped_stage3 = False
         drops = []  # each drop: dict with surf, x, y, vy, type
         dropped_at = None
 
@@ -77,14 +81,36 @@ class Intro:
             # update
             plane_x += plane_speed
 
-            if plane_x > WIDTH // 2 and not dropped:
-                self._spawn_drops(plane_x + plane_w // 2, plane_y + plane_h // 2, drops)
-                dropped = True
+            # stage 1: when plane just enters the screen (x > 0) - trigger earlier by subtracting advance
+            if plane_x > 0 - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage1:
+                self._spawn_drops_random(plane_x + plane_w // 2, plane_y + plane_h, drops)
+                dropped_stage1 = True
+                if INTRO_DROP_PAUSE:
+                    # pause plane for a short duration to let drops start falling
+                    pygame.display.flip()
+                    pygame.time.wait(INTRO_DROP_PAUSE_MS)
+
+            # stage 2: earlier point (about 15% across) so center drop is not too late
+            if plane_x > int(WIDTH * 0.15) - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage2:
+                self._spawn_drops_random(plane_x + plane_w // 2, plane_y + plane_h, drops)
+                dropped_stage2 = True
                 dropped_at = pygame.time.get_ticks()
+                if INTRO_DROP_PAUSE:
+                    pygame.display.flip()
+                    pygame.time.wait(INTRO_DROP_PAUSE_MS)
+
+            # stage 3: use the original center position (previously stage2) so it's between 1 and the exit
+            if plane_x > WIDTH // 2 - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage3:
+                self._spawn_drops_random(plane_x + plane_w // 2, plane_y + plane_h, drops)
+                dropped_stage3 = True
+                if INTRO_DROP_PAUSE:
+                    pygame.display.flip()
+                    pygame.time.wait(INTRO_DROP_PAUSE_MS)
 
             # update drop physics
             for d in drops:
-                d['vy'] += 0.25
+                # slower gravity in intro to match main game feel
+                d['vy'] += 0.12
                 d['y'] += d['vy']
 
             # draw
@@ -104,8 +130,8 @@ class Intro:
                     color = (212, 175, 55) if d['type'] == 'coin' else (200, 80, 80) if d['type'] == 'bomb' else (180, 255, 180)
                     pygame.draw.circle(self.screen, color, (int(d['x']), int(d['y']) + 8), 10)
 
-            # messages and button after a short delay from drop
-            if dropped and dropped_at is not None:
+            # messages and button after a short delay from the center drop
+            if dropped_stage2 and dropped_at is not None:
                 age = pygame.time.get_ticks() - dropped_at
                 if age > 300:
                     # English text for compatibility
@@ -132,7 +158,7 @@ class Intro:
 
             # if plane completely leaves right and button not shown, force show
             if plane_x > WIDTH + 20 and not show_button:
-                dropped = True
+                dropped_stage2 = True
                 if dropped_at is None:
                     dropped_at = pygame.time.get_ticks()
 
@@ -144,7 +170,58 @@ class Intro:
         bomb = self.bomb_img = getattr(self, 'bomb_img', None)
         coin = getattr(self, 'coin_img', None)
         health = getattr(self, 'health_img', None)
+        # scale assets to DROP_SIZE to match in-game icons and ensure spacing
+        try:
+            sb = pygame.transform.smoothscale(bomb, (DROP_SIZE, DROP_SIZE)) if bomb else None
+        except Exception:
+            sb = bomb
+        try:
+            sc = pygame.transform.smoothscale(coin, (DROP_SIZE, DROP_SIZE)) if coin else None
+        except Exception:
+            sc = coin
+        try:
+            sh = pygame.transform.smoothscale(health, (DROP_SIZE, DROP_SIZE)) if health else None
+        except Exception:
+            sh = health
 
-        drops.append({'surf': bomb, 'x': cx - 60, 'y': cy, 'vy': 2.6, 'type': 'bomb'})
-        drops.append({'surf': coin, 'x': cx, 'y': cy, 'vy': 2.0, 'type': 'coin'})
-        drops.append({'surf': health, 'x': cx + 60, 'y': cy, 'vy': 2.2, 'type': 'health'})
+        spacing = max(16, DROP_SIZE + 8)
+        drops.append({'surf': sb, 'x': cx - spacing, 'y': cy, 'vy': 2.6, 'type': 'bomb'})
+        drops.append({'surf': sc, 'x': cx, 'y': cy, 'vy': 2.0, 'type': 'coin'})
+        drops.append({'surf': sh, 'x': cx + spacing, 'y': cy, 'vy': 2.2, 'type': 'health'})
+
+    def _spawn_drops_random(self, cx, cy, drops):
+        """Spawn a randomized set of drops around (cx, cy).
+        Uses the assets loaded in __init__. Each call spawns 2..4 items with small x offsets and slower initial vy.
+        """
+        import random
+
+        assets = [
+            ('bomb', getattr(self, 'bomb_img', None)),
+            ('coin', getattr(self, 'coin_img', None)),
+            ('health', getattr(self, 'health_img', None))
+        ]
+        count = random.randint(2, 4)
+        # use horizontal spacing based on DROP_SIZE to avoid overlap
+        spacing = max(16, DROP_SIZE + 8)
+        # center the set around cx
+        start = - (count - 1) * 0.5 * spacing
+        for i in range(count):
+            kind, surf = random.choice(assets)
+            # small jitter on top of spaced positions
+            jitter = random.randint(-8, 8)
+            pos_x = int(cx + start + i * spacing + jitter)
+            # initial vy moderate so items fall at similar pace to game
+            vy = random.uniform(1.2, 2.0)
+            # scale surf to DROP_SIZE if available
+            s = None
+            try:
+                s = pygame.transform.smoothscale(surf, (DROP_SIZE, DROP_SIZE)) if surf else None
+            except Exception:
+                s = surf
+            drops.append({
+                'surf': s,
+                'x': pos_x,
+                'y': cy,
+                'vy': vy,
+                'type': kind
+            })
