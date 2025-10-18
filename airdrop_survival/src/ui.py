@@ -234,8 +234,27 @@ def draw_background(screen, width, height):
 def draw_center_countdown(screen, font, seconds_left):
     """Draw a centered countdown message in English: 'XX seconds until starvation'"""
     try:
-        text = f"{seconds_left} seconds until starvation"
-        txt = font.render(text, True, (10, 10, 10))
+        # Prepare display text
+        secs = 0 if seconds_left is None else max(0, int(seconds_left))
+        text = f"{secs} seconds until starvation"
+
+        # Low-time visual warning: when <= WARNING_THRESHOLD, flash/change color
+        WARNING_THRESHOLD = 5
+        color_normal = (10, 10, 10)
+        color_warning_a = RED if 'RED' in globals() else (200, 30, 30)
+        color_warning_b = (80, 10, 10)
+
+        is_warning = secs <= WARNING_THRESHOLD
+        if is_warning:
+            # Blink frequency (ms)
+            t = pygame.time.get_ticks()
+            blink_on = ((t // 400) % 2) == 0
+            txt_color = color_warning_a if blink_on else color_warning_b
+        else:
+            txt_color = color_normal
+
+        txt = font.render(text, True, txt_color)
+
         # render a small stomach icon to the left of the text for clarity
         icon_size = 20
         gap = 8
@@ -243,16 +262,25 @@ def draw_center_countdown(screen, font, seconds_left):
         total_w = icon_size + gap + txt.get_width()
         x0 = WIDTH // 2 - total_w // 2
         y = 10
-        # draw icon
+        # draw icon (also tint slightly when warning)
         if _IMG_STOMACH:
             try:
                 icon_s = pygame.transform.smoothscale(_IMG_STOMACH, (icon_size, icon_size))
-                screen.blit(icon_s, (x0, y + (txt.get_height() - icon_size) // 2))
+                if is_warning:
+                    # tint the icon by blending a red surface on top to emphasize
+                    tint = pygame.Surface((icon_size, icon_size), pygame.SRCALPHA)
+                    tint.fill((255, 80, 80, 120))
+                    tmp = icon_s.copy()
+                    tmp.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+                    screen.blit(tmp, (x0, y + (txt.get_height() - icon_size) // 2))
+                else:
+                    screen.blit(icon_s, (x0, y + (txt.get_height() - icon_size) // 2))
             except Exception:
-                # fallback to simple ellipse
                 pygame.draw.ellipse(screen, (100, 150, 200), (x0, y + (txt.get_height() - icon_size) // 2, icon_size, icon_size))
         else:
-            pygame.draw.ellipse(screen, (100, 150, 200), (x0, y + (txt.get_height() - icon_size) // 2, icon_size, icon_size))
+            ic_color = (200, 60, 60) if is_warning else (100, 150, 200)
+            pygame.draw.ellipse(screen, ic_color, (x0, y + (txt.get_height() - icon_size) // 2, icon_size, icon_size))
+
         # draw text to the right of the icon
         screen.blit(txt, (x0 + icon_size + gap, y))
     except Exception:
