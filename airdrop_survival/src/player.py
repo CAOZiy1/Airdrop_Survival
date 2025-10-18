@@ -67,7 +67,15 @@ class Player:
             sprite = _PLAYER_IMG
 
         if sprite:
-            surf = pygame.transform.smoothscale(sprite, (self.rect.width, self.rect.height))
-            screen.blit(surf, (self.rect.x, self.rect.y))
+            # preserve aspect ratio: scale sprite to fit inside rect
+            iw, ih = sprite.get_width(), sprite.get_height()
+            rw, rh = self.rect.width, self.rect.height
+            scale = min(rw / iw, rh / ih)
+            target_w = max(1, int(iw * scale))
+            target_h = max(1, int(ih * scale))
+            surf = pygame.transform.smoothscale(sprite, (target_w, target_h))
+            # center the sprite on the player's rect
+            dest = surf.get_rect(center=self.rect.center)
+            screen.blit(surf, dest.topleft)
         else:
             pygame.draw.rect(screen, color, self.rect)
