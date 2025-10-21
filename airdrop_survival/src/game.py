@@ -6,7 +6,7 @@ from settings import WIDTH, HEIGHT, PLAYER_HEIGHT
 from player import Player
 from drop import Drop
 from ui import draw_status, draw_gameover
-from settings import MAX_HUNGER, HUNGER_DECAY_SECONDS, COINS_PER_FOOD
+## COINS_PER_FOOD removed
 from settings import LEVELS, CAN_IMAGE
 
 
@@ -22,10 +22,7 @@ class Game:
         self.drops = []
         self.hearts = 3
         self.coins = 0
-        # hunger: starts full
-        self.hunger = MAX_HUNGER
-        # next timestamp (ms) when hunger will decay by 1
-        self.next_hunger_decay = pygame.time.get_ticks() + int(HUNGER_DECAY_SECONDS * 1000)
+    # ...hunger system removed...
         self.running = True
         # track start time (milliseconds)
         self.start_ticks = pygame.time.get_ticks()
@@ -86,13 +83,7 @@ class Game:
                 self.running = False
             # keydown for buying food
             elif event.type == pygame.KEYDOWN:
-                # spend coins to buy food: 'f' key
-                if event.key == pygame.K_f:
-                    if self.coins >= COINS_PER_FOOD and self.hunger < MAX_HUNGER:
-                        self.coins -= COINS_PER_FOOD
-                        self.hunger = min(MAX_HUNGER, self.hunger + 1)
-                        # show a +food coin pop at player
-                        self.coin_pops.append((self.player.rect.centerx, self.player.rect.top, pygame.time.get_ticks(), "+food"))
+                pass  # hunger system removed
 
     def update(self):
         keys = pygame.key.get_pressed()
@@ -136,13 +127,7 @@ class Game:
         # coin_pops now contain tuples (x, start_y, t0, text)
         self.coin_pops = [p for p in self.coin_pops if now - p[2] < COIN_POP_DURATION]
 
-        # hunger decay over time
-        if now >= self.next_hunger_decay:
-            # reduce hunger by 1 if >0
-            if self.hunger > 0:
-                self.hunger -= 1
-            # schedule next decay
-            self.next_hunger_decay = now + int(HUNGER_DECAY_SECONDS * 1000)
+        # ...hunger system removed...
 
         # Level timer check: if level active and time reached, evaluate outcome
         if self.level_active and self.level_end_time is not None and now >= self.level_end_time:
@@ -162,11 +147,8 @@ class Game:
                 reward_img = None
 
             if self.coins >= coins_required:
-                # success: consume coins and grant hunger restore if configured
+                # success: consume coins
                 self.coins -= coins_required
-                hunger_gain = reward.get('hunger_restore', 0)
-                if hunger_gain:
-                    self.hunger = min(MAX_HUNGER, self.hunger + hunger_gain)
                 # show success UI with can image
                 draw_level_result(self.screen, self.font, f"恭喜！获得 {reward.get('type', '奖励')}", success=True, reward_image=reward_img)
                 # advance to next level if available
@@ -198,12 +180,11 @@ class Game:
                     self.running = False
                     return
             else:
-                # failure: player starves (set hunger to 0) and show message
-                self.hunger = 0
-                draw_level_result(self.screen, self.font, "时间到！钱不够，被饿死了。", success=False, reward_image=None)
+                # failure: show message
+                draw_level_result(self.screen, self.font, "时间到！钱不够，挑战失败。", success=False, reward_image=None)
                 self.level_active = False
                 # show game over after failure
-                draw_gameover(self.screen, self.font, "Game Over - You Starved", (255, 0, 0))
+                draw_gameover(self.screen, self.font, "Game Over - Challenge Failed", (255, 0, 0))
                 self.running = False
                 return
         if self.hearts <= 0:
@@ -231,7 +212,7 @@ class Game:
                 # draw drops and status then player so halo can be drawn on top
                 for drop in self.drops:
                     drop.draw(self.screen)
-                draw_status(self.screen, self.font, self.hearts, self.coins, self.hunger)
+                draw_status(self.screen, self.font, self.hearts, self.coins)
                 # draw player (dead sprite will be drawn by player.draw)
                 self.player.draw(self.screen, (0, 0, 0))
 
@@ -326,7 +307,7 @@ class Game:
         if self.level_active and self.level_end_time is not None:
             ms_left = max(0, self.level_end_time - pygame.time.get_ticks())
             time_left = int(ms_left / 1000)
-        draw_status(self.screen, self.font, self.hearts, self.coins, self.hunger)
+        draw_status(self.screen, self.font, self.hearts, self.coins)
         # show centered countdown message about starvation
         if time_left is not None:
             try:

@@ -2,7 +2,7 @@
 
 import pygame
 import os
-from settings import WIDTH, HEIGHT, MAX_HUNGER, COINS_PER_FOOD, MAX_HEALTH
+from settings import WIDTH, HEIGHT, MAX_HEALTH
 
 # Cached icon surfaces
 _HEART_ICON = None

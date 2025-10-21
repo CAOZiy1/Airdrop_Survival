@@ -13,14 +13,9 @@ PLAYER_SPEED = 5
 # Visual tuning for player rendering (does not change collision rect)
 # Multiply the drawn sprite size by this factor (1.0 = draw at rect size)
 PLAYER_DRAW_SCALE = 1.25
-# Draw an outline around the player sprite to improve contrast against background
-PLAYER_OUTLINE = True
-PLAYER_OUTLINE_COLOR = (0, 0, 0)
-PLAYER_OUTLINE_WIDTH = 2
 # Vertical raise in pixels from the bottom when spawning the player (higher => player appears higher)
 PLAYER_VERTICAL_RAISE = 25
 
-# Maximum health (number of hearts shown)
 MAX_HEALTH = 3
 
 # 投掷物设置
@@ -30,7 +25,7 @@ DROP_TYPES = ["bomb", "coin", "health_pack"]
 # Adjusted to make bombs less frequent so player can prioritize coins.
 # Order: [bomb, coin, health_pack]
 # Previously bombs were very common; lower that weight relative to coins.
-DROP_WEIGHTS = [6, 5, 0.5]
+DROP_WEIGHTS = [6, 4, 0.5]
 
 # Drop speed settings (base random range and increase over time in pixels/frame)
 # Drops will choose a base speed between DROP_BASE_SPEED_MIN and DROP_BASE_SPEED_MAX,
@@ -77,17 +72,10 @@ DROP_SPAWN_INTERVAL_MIN = 10
 # Decrease the interval by this many units per minute (so smaller => more frequent)
 DROP_SPAWN_DECREASE_PER_MIN = 3
 
-# Hunger / economy settings
-# Maximum hunger units (displayed as stomach icons)
-MAX_HUNGER = 3
-# Seconds between automatic hunger decay (player gets hungrier over time)
-HUNGER_DECAY_SECONDS = 20
-# Number of coins required to buy 1 food unit
-COINS_PER_FOOD = 5
 
 # Level configuration: list of dicts with 'name', 'time_seconds', 'coins_required', 'reward'
 # reward can be a dict describing what the player receives when meeting the coin goal
-# First level: collect 30 coins before time runs out to get a can (+1 hunger)
+# First level: collect 20 coins before time runs out to get a food can
 LEVELS = [
 	{
 		'name': 'Level 1',
@@ -95,7 +83,6 @@ LEVELS = [
 		'coins_required': 20,
 		'reward': {
 			'type': 'food_can',
-			'hunger_restore': 1,
 			'image': 'can.png'
 		}
 	}
@@ -108,6 +95,6 @@ CAN_IMAGE = 'can.png'
 # If True, the plane will pause at each drop node so drops have time to fall
 INTRO_DROP_PAUSE = True
 # Pause duration in milliseconds when the plane reaches a drop node
-INTRO_DROP_PAUSE_MS = 600
+INTRO_DROP_PAUSE_MS = 100
 # Advance drop triggers by this many pixels (positive = trigger earlier)
 INTRO_DROP_TRIGGER_ADVANCE = 90
