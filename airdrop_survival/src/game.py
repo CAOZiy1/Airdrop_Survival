@@ -6,7 +6,6 @@ from settings import WIDTH, HEIGHT, PLAYER_HEIGHT
 from player import Player
 from drop import Drop
 from ui import draw_status, draw_gameover
-## COINS_PER_FOOD removed
 from settings import LEVELS, CAN_IMAGE
 
 
@@ -22,7 +21,6 @@ class Game:
         self.drops = []
         self.hearts = 3
         self.coins = 0
-    # ...hunger system removed...
         self.running = True
         # track start time (milliseconds)
         self.start_ticks = pygame.time.get_ticks()
@@ -31,21 +29,7 @@ class Game:
         self.level = LEVELS[self.level_index] if LEVELS else None
         self.level_end_time = self.start_ticks + (self.level['time_seconds'] * 1000) if self.level else None
         self.level_active = True if self.level else False
-        # show level start hint for initial level
-        if self.level_active:
-            try:
-                from ui import draw_level_start_hint
-                # try to load reward image
-                reward = self.level.get('reward', {})
-                reward_img = None
-                import os
-                base = os.path.join(os.path.dirname(__file__), '..', 'assets')
-                p = os.path.join(base, reward.get('image', CAN_IMAGE))
-                if os.path.exists(p):
-                    reward_img = pygame.image.load(p).convert_alpha()
-                draw_level_start_hint(self.screen, self.font, self.level.get('coins_required', 0), reward.get('type', 'can'), reward_image=reward_img)
-            except Exception:
-                pass
+        # 不再显示关卡开始提示，直接进入游戏
         # visual feedback: coin pop effects as list of (x, y, start_ms, text)
         self.coin_pops = []
         # small font for coin pop text
@@ -150,7 +134,7 @@ class Game:
                 # success: consume coins
                 self.coins -= coins_required
                 # show success UI with can image
-                draw_level_result(self.screen, self.font, f"恭喜！获得 {reward.get('type', '奖励')}", success=True, reward_image=reward_img)
+                draw_level_result(self.screen, self.font, f"CONGRATULATIONS！YOU GOT A {reward.get('type', '奖励')}", success=True, reward_image=reward_img)
                 # advance to next level if available
                 if self.level_index + 1 < len(LEVELS):
                     self.level_index += 1
@@ -181,7 +165,7 @@ class Game:
                     return
             else:
                 # failure: show message
-                draw_level_result(self.screen, self.font, "时间到！钱不够，挑战失败。", success=False, reward_image=None)
+                draw_level_result(self.screen, self.font, "Time's up! Not enough coins, challenge failed.", success=False, reward_image=None)
                 self.level_active = False
                 # show game over after failure
                 draw_gameover(self.screen, self.font, "Game Over - Challenge Failed", (255, 0, 0))

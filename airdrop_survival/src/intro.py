@@ -83,7 +83,7 @@ class Intro:
             plane_x += plane_speed
 
             # stage 1: when plane just enters the screen (x > 0) - trigger earlier by subtracting advance
-            if plane_x > int(WIDTH * 0.1) - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage1:
+            if plane_x > int(WIDTH * 0.05) - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage1:
                 self._spawn_drops_random(plane_x + plane_w // 2, plane_y + plane_h, drops)
                 dropped_stage1 = True
                 if INTRO_DROP_PAUSE:
@@ -92,7 +92,7 @@ class Intro:
                     pygame.time.wait(INTRO_DROP_PAUSE_MS)
 
             # stage 2: 
-            if plane_x > int(WIDTH * 0.4) - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage2:
+            if plane_x > int(WIDTH * 0.3) - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage2:
                 self._spawn_drops_random(plane_x + plane_w // 2, plane_y + plane_h, drops)
                 dropped_stage2 = True
                 dropped_at = pygame.time.get_ticks()
@@ -101,7 +101,7 @@ class Intro:
                     pygame.time.wait(INTRO_DROP_PAUSE_MS)
 
             # stage 3: 
-            if plane_x > int(WIDTH * 0.7) - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage3:
+            if plane_x > int(WIDTH * 0.6) - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage3:
                 self._spawn_drops_random(plane_x + plane_w // 2, plane_y + plane_h, drops)
                 dropped_stage3 = True
                 if INTRO_DROP_PAUSE:
@@ -140,22 +140,32 @@ class Intro:
                 dark_overlay.set_alpha(160)
                 dark_overlay.fill((0, 0, 0))
                 self.screen.blit(dark_overlay, (0, 0))
+                # 罐头图片（can.png）
+                can_img = _load_asset('can.png')
+                if can_img:
+                    scale = int(DROP_SIZE * 1.5)
+                    can_img = pygame.transform.smoothscale(can_img, (scale, scale))
+                    can_x = WIDTH // 2 - can_img.get_width() // 2
+                    can_y = HEIGHT // 2 - 120
+                    self.screen.blit(can_img, (can_x, can_y))
                 # 提示文字
-                t1 = self.font.render('Collect 20 coins to trade for a can', True, (255, 230, 180))
-                t2 = self.font.render("Don't starve", True, (255, 230, 180))
+                t1 = self.font.render('COLLECT 20 COINS FOR A CAN', True, (255, 230, 180))
+                t2 = self.font.render("LEVEL 1", True, (255, 230, 180))
                 self.screen.blit(t1, (WIDTH // 2 - t1.get_width() // 2, HEIGHT // 2 - 40))
                 self.screen.blit(t2, (WIDTH // 2 - t2.get_width() // 2, HEIGHT // 2))
                 # 按钮延迟显示
-                if pygame.time.get_ticks() - dark_shown_at > 1200:
-                    label = self.small_font.render('Enter Game', True, (10, 10, 10))
-                    padx, pady = 14, 8
+                if pygame.time.get_ticks() - dark_shown_at > 900:
+                    # 使用更大的字体
+                    big_font = pygame.font.SysFont(None, 32)
+                    label = big_font.render('ENTER GAME', True, (10, 10, 10))
+                    padx, pady = 20, 14  # 增加内边距
                     bw = label.get_width() + padx * 2
                     bh = label.get_height() + pady * 2
                     bx = WIDTH // 2 - bw // 2
                     by = HEIGHT // 2 + 60
                     button_rect = pygame.Rect(bx, by, bw, bh)
-                    pygame.draw.rect(self.screen, (255, 230, 140), button_rect, border_radius=6)
-                    pygame.draw.rect(self.screen, (60, 60, 60), button_rect, width=2, border_radius=6)
+                    pygame.draw.rect(self.screen, (255, 230, 140), button_rect, border_radius=10)
+                    pygame.draw.rect(self.screen, (60, 60, 60), button_rect, width=3, border_radius=10)
                     self.screen.blit(label, (bx + padx, by + pady - 1))
                     show_button = True
 
