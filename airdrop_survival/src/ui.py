@@ -56,11 +56,19 @@ def _load_status_images():
     # can image for level reward
     try:
         can_path = os.path.join(base, 'can.png')
+        print(f"[can debug] can_path: {can_path}, exists: {os.path.exists(can_path)}")
         if os.path.exists(can_path):
-            _IMG_CAN = pygame.image.load(can_path).convert_alpha()
+            try:
+                _IMG_CAN = pygame.image.load(can_path).convert_alpha()
+                print("[can debug] can.png loaded successfully.")
+            except Exception as e:
+                print(f"[can debug] Failed to load can.png: {e}")
+                _IMG_CAN = None
         else:
+            print("[can debug] can.png does not exist at path.")
             _IMG_CAN = None
-    except Exception:
+    except Exception as e:
+        print(f"[can debug] Exception during can.png load: {e}")
         _IMG_CAN = None
 
 def _create_icons(size=24):
@@ -95,8 +103,7 @@ def _create_icons(size=24):
 
 
 def draw_status(screen, font, hearts, coins, hunger=None, time_left_seconds=None):
-    global _HEART_ICON, _COIN_ICON
-    global _IMG_COIN, _IMG_HEALTH
+    global _HEART_ICON, _COIN_ICON, _IMG_COIN, _IMG_HEALTH
     if _IMG_COIN is None and _IMG_HEALTH is None:
         _load_status_images()
 
@@ -141,9 +148,48 @@ def draw_status(screen, font, hearts, coins, hunger=None, time_left_seconds=None
     text2 = font.render(str(coins), True, BLACK)
     screen.blit(text2, (x2 + _COIN_ICON.get_width() + 4, y + (_COIN_ICON.get_height() - text2.get_height()) // 2))
 
-    # Hunger is now shown as a single icon beside the top countdown; we no longer render multiple stomach icons here.
 
-    # (time display moved to centered message; draw_status no longer renders it)
+    # ...existing code...
+
+    # 右上角静态显示罐头图标（始终在最顶层）
+    global _IMG_CAN
+    # 只在首次需要时加载罐头图片，避免每帧重复加载
+    if _IMG_CAN is None:
+        try:
+            base = os.path.join(os.path.dirname(__file__), '..', 'assets')
+            can_path = os.path.join(base, 'can.png')
+            if os.path.exists(can_path):
+                _IMG_CAN = pygame.image.load(can_path).convert_alpha()
+        except Exception:
+            _IMG_CAN = None
+    if _IMG_CAN is not None:
+        can_size = 40
+        can_img = pygame.transform.smoothscale(_IMG_CAN, (can_size, can_size))
+        can_x = WIDTH - can_size - 10
+        can_y = 10
+        screen.blit(can_img, (can_x, can_y))
+
+        # 在罐头图标正下方绘制“20”加金币图标
+    coin_size = int(22 * 0.8)
+    coin_y = can_y + can_size + 4
+    coin_x = can_x + (can_size - coin_size) // 2 + 8
+    # 小号字体绘制黑色“20”
+    font_small = pygame.font.SysFont(None, 22)
+    label_surface = font_small.render("20", True, (0, 0, 0))
+    space = 6  # 空格距离
+    label_x = can_x + (can_size - coin_size) // 2 - label_surface.get_width() + 8
+    label_y = coin_y + (coin_size - label_surface.get_height()) // 2
+    screen.blit(label_surface, (label_x, label_y))
+    coin_x = label_x + label_surface.get_width() + space
+        # 绘制金币图标
+    # global声明已在函数顶部
+    coin_img = None
+    if _IMG_COIN:
+        coin_img = pygame.transform.smoothscale(_IMG_COIN, (coin_size, coin_size))
+    elif _COIN_ICON:
+        coin_img = pygame.transform.smoothscale(_COIN_ICON, (coin_size, coin_size))
+    if coin_img:
+        screen.blit(coin_img, (coin_x, coin_y))
 
 
 def draw_gameover(screen, font, message, color):
@@ -179,7 +225,7 @@ def draw_level_result(screen, font, message, success=True, reward_image=None):
 
 
 def draw_level_start_hint(screen, font, coins_required, reward_text, reward_image=None, duration_ms=2000):
-    """Show a brief level-start hint like '30 coins for a can' with optional image.
+    """Show a brief level-start hint like '20 coins for a can' with optional image.
 
     Blocks for duration_ms milliseconds to ensure player sees the objective.
     """
