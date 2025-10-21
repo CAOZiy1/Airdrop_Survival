@@ -2,7 +2,7 @@
 
 import pygame
 import os
-from settings import BLACK, RED, GREEN, WIDTH, HEIGHT, MAX_HUNGER, COINS_PER_FOOD, MAX_HEALTH
+from settings import WIDTH, HEIGHT, MAX_HUNGER, COINS_PER_FOOD, MAX_HEALTH
 
 # Cached icon surfaces
 _HEART_ICON = None
@@ -13,6 +13,12 @@ _IMG_STOMACH = None
 _STOMACH_ICON = None
 _IMG_BACKGROUND = None
 _IMG_CAN = None
+
+# Color constants used by the UI
+RED = (200, 30, 30)
+GREEN = (50, 200, 50)
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
 
 def _load_status_images():
     global _IMG_COIN, _IMG_HEALTH

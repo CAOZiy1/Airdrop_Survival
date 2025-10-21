@@ -4,12 +4,6 @@
 WIDTH = 800
 HEIGHT = 600
 
-# 颜色定义
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-RED = (255, 0, 0)
-GOLD = (255, 215, 0)
-GREEN = (0, 255, 0)
 
 # 玩家设置
 PLAYER_WIDTH = 90
@@ -116,4 +110,4 @@ INTRO_DROP_PAUSE = True
 # Pause duration in milliseconds when the plane reaches a drop node
 INTRO_DROP_PAUSE_MS = 600
 # Advance drop triggers by this many pixels (positive = trigger earlier)
-INTRO_DROP_TRIGGER_ADVANCE = 160
+INTRO_DROP_TRIGGER_ADVANCE = 90

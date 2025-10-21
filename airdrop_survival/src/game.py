@@ -2,7 +2,7 @@
 
 import pygame
 import random
-from settings import WIDTH, HEIGHT, WHITE, BLACK, RED, GREEN, PLAYER_HEIGHT
+from settings import WIDTH, HEIGHT, PLAYER_HEIGHT
 from player import Player
 from drop import Drop
 from ui import draw_status, draw_gameover
@@ -194,7 +194,7 @@ class Game:
                         pass
                 else:
                     # no more levels: victory
-                    draw_gameover(self.screen, self.font, "Victory! You cleared all levels!", GREEN)
+                    draw_gameover(self.screen, self.font, "Victory! You cleared all levels!", (0, 220, 0))
                     self.running = False
                     return
             else:
@@ -233,7 +233,7 @@ class Game:
                     drop.draw(self.screen)
                 draw_status(self.screen, self.font, self.hearts, self.coins, self.hunger)
                 # draw player (dead sprite will be drawn by player.draw)
-                self.player.draw(self.screen, BLACK)
+                self.player.draw(self.screen, (0, 0, 0))
 
                 # halo animation: rises from player's head upward over the death duration
                 now = pygame.time.get_ticks()
@@ -308,17 +308,17 @@ class Game:
                 self.screen.blit(overlay, (0, 0))
 
             # final Game Over message after desaturation
-            draw_gameover(self.screen, self.font, "Game Over - You Died", RED)
+            draw_gameover(self.screen, self.font, "Game Over - You Died", (255, 0, 0))
             pygame.display.flip()
             # short pause for the Game Over display
             pygame.time.wait(1500)
             self.running = False
         elif self.coins >= 50:
-            draw_gameover(self.screen, self.font, "Victory! You collected 50 coins!", GREEN)
+            draw_gameover(self.screen, self.font, "Victory! You collected 50 coins!", (0, 220, 0))
             self.running = False
 
     def draw(self):
-        self.player.draw(self.screen, BLACK)
+        self.player.draw(self.screen, (0, 0, 0))
         for drop in self.drops:
             drop.draw(self.screen)
         # compute remaining level time if active
