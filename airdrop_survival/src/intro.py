@@ -68,6 +68,7 @@ class Intro:
         running = True
         button_rect = None
         show_button = False
+        dark_shown_at = None
 
         while running:
             for event in pygame.event.get():
@@ -82,7 +83,7 @@ class Intro:
             plane_x += plane_speed
 
             # stage 1: when plane just enters the screen (x > 0) - trigger earlier by subtracting advance
-            if plane_x > 0 - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage1:
+            if plane_x > int(WIDTH * 0.1) - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage1:
                 self._spawn_drops_random(plane_x + plane_w // 2, plane_y + plane_h, drops)
                 dropped_stage1 = True
                 if INTRO_DROP_PAUSE:
@@ -90,8 +91,8 @@ class Intro:
                     pygame.display.flip()
                     pygame.time.wait(INTRO_DROP_PAUSE_MS)
 
-            # stage 2: earlier point (about 15% across) so center drop is not too late
-            if plane_x > int(WIDTH * 0.15) - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage2:
+            # stage 2: 
+            if plane_x > int(WIDTH * 0.4) - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage2:
                 self._spawn_drops_random(plane_x + plane_w // 2, plane_y + plane_h, drops)
                 dropped_stage2 = True
                 dropped_at = pygame.time.get_ticks()
@@ -99,8 +100,8 @@ class Intro:
                     pygame.display.flip()
                     pygame.time.wait(INTRO_DROP_PAUSE_MS)
 
-            # stage 3: use the original center position (previously stage2) so it's between 1 and the exit
-            if plane_x > WIDTH // 2 - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage3:
+            # stage 3: 
+            if plane_x > int(WIDTH * 0.7) - INTRO_DROP_TRIGGER_ADVANCE and not dropped_stage3:
                 self._spawn_drops_random(plane_x + plane_w // 2, plane_y + plane_h, drops)
                 dropped_stage3 = True
                 if INTRO_DROP_PAUSE:
@@ -130,17 +131,22 @@ class Intro:
                     color = (212, 175, 55) if d['type'] == 'coin' else (200, 80, 80) if d['type'] == 'bomb' else (180, 255, 180)
                     pygame.draw.circle(self.screen, color, (int(d['x']), int(d['y']) + 8), 10)
 
-            # messages and button after a short delay from the center drop
-            if dropped_stage2 and dropped_at is not None:
-                age = pygame.time.get_ticks() - dropped_at
-                if age > 300:
-                    # English text for compatibility
-                    t1 = self.font.render('Collect 20 coins to trade for a can', True, (255, 230, 180))
-                    t2 = self.font.render("Don't starve", True, (255, 230, 180))
-                    self.screen.blit(t1, (WIDTH // 2 - t1.get_width() // 2, HEIGHT // 2 - 40))
-                    self.screen.blit(t2, (WIDTH // 2 - t2.get_width() // 2, HEIGHT // 2))
-
-                    # button
+            # 飞机完全飞出画面后，先变暗和显示提示，延迟后再显示按钮
+            if plane_x > WIDTH + 20:
+                if dark_shown_at is None:
+                    dark_shown_at = pygame.time.get_ticks()
+                # 画面变暗
+                dark_overlay = pygame.Surface((WIDTH, HEIGHT))
+                dark_overlay.set_alpha(160)
+                dark_overlay.fill((0, 0, 0))
+                self.screen.blit(dark_overlay, (0, 0))
+                # 提示文字
+                t1 = self.font.render('Collect 20 coins to trade for a can', True, (255, 230, 180))
+                t2 = self.font.render("Don't starve", True, (255, 230, 180))
+                self.screen.blit(t1, (WIDTH // 2 - t1.get_width() // 2, HEIGHT // 2 - 40))
+                self.screen.blit(t2, (WIDTH // 2 - t2.get_width() // 2, HEIGHT // 2))
+                # 按钮延迟显示
+                if pygame.time.get_ticks() - dark_shown_at > 1200:
                     label = self.small_font.render('Enter Game', True, (10, 10, 10))
                     padx, pady = 14, 8
                     bw = label.get_width() + padx * 2
@@ -152,6 +158,7 @@ class Intro:
                     pygame.draw.rect(self.screen, (60, 60, 60), button_rect, width=2, border_radius=6)
                     self.screen.blit(label, (bx + padx, by + pady - 1))
                     show_button = True
+
 
             pygame.display.flip()
             self.clock.tick(60)
