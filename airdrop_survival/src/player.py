@@ -2,7 +2,7 @@
 
 import pygame
 import os
-from settings import PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_SPEED, HEIGHT
+from settings import PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_SPEED, HEIGHT, WIDTH
 from settings import PLAYER_DRAW_SCALE, PLAYER_VERTICAL_RAISE
 
 _PLAYER_IMG = None
@@ -50,9 +50,12 @@ class Player:
         self.dead_until = 0
 
     def move(self, keys):
-        if keys[pygame.K_LEFT] and self.rect.left > 0:
+        # support arrow keys and A/D for left/right movement
+        left_pressed = keys[pygame.K_LEFT] or keys[pygame.K_a]
+        right_pressed = keys[pygame.K_RIGHT] or keys[pygame.K_d]
+        if left_pressed and self.rect.left > 0:
             self.rect.x -= PLAYER_SPEED
-        if keys[pygame.K_RIGHT] and self.rect.right < 800:
+        if right_pressed and self.rect.right < WIDTH:
             self.rect.x += PLAYER_SPEED
 
     def set_hurt(self, duration_seconds):

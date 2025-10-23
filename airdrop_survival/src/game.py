@@ -67,7 +67,12 @@ class Game:
                 self.running = False
             # keydown for buying food
             elif event.type == pygame.KEYDOWN:
-                pass  # hunger system removed
+                # debug: print A/D keydowns to verify input
+                try:
+                    if event.key in (pygame.K_a, pygame.K_d):
+                        print(f"keydown: {event.key}, name: {pygame.key.name(event.key)}")
+                except Exception:
+                    pass
 
     def update(self):
         keys = pygame.key.get_pressed()
@@ -134,7 +139,7 @@ class Game:
                 # success: consume coins
                 self.coins -= coins_required
                 # show success UI with can image
-                draw_level_result(self.screen, self.font, f"CONGRATULATIONS！YOU GOT A {reward.get('type', '奖励')}", success=True, reward_image=reward_img)
+                draw_level_result(self.screen, self.font, f"CONGRATULATIONS! YOU GOT A {reward.get('type', '奖励')}", success=True, reward_image=reward_img)
                 # advance to next level if available
                 if self.level_index + 1 < len(LEVELS):
                     self.level_index += 1
@@ -159,16 +164,16 @@ class Game:
                     except Exception:
                         pass
                 else:
-                    # no more levels: victory
-                    draw_gameover(self.screen, self.font, "Victory! You cleared all levels!", (0, 220, 0))
+                    # no more levels: end game — show back-to-menu overlay
+                    self._show_back_to_menu("All levels cleared!", (0, 220, 0))
                     self.running = False
                     return
             else:
                 # failure: show message
                 draw_level_result(self.screen, self.font, "Time's up! Not enough coins, challenge failed.", success=False, reward_image=None)
                 self.level_active = False
-                # show game over after failure
-                draw_gameover(self.screen, self.font, "Game Over - Challenge Failed", (255, 0, 0))
+                # show game over after failure with back-to-menu option
+                self._show_back_to_menu("GAME OVER", (255, 0, 0))
                 self.running = False
                 return
         if self.hearts <= 0:
@@ -272,15 +277,10 @@ class Game:
                 overlay.fill((120, 120, 120, 150))
                 self.screen.blit(overlay, (0, 0))
 
-            # final Game Over message after desaturation
-            draw_gameover(self.screen, self.font, "Game Over - You Died", (255, 0, 0))
-            pygame.display.flip()
-            # short pause for the Game Over display
-            pygame.time.wait(1500)
+            # final Game Over message after desaturation — back-to-menu option
+            self._show_back_to_menu("Game Over - You Died", (255, 0, 0))
             self.running = False
-        elif self.coins >= 50:
-            draw_gameover(self.screen, self.font, "Victory! You collected 50 coins!", (0, 220, 0))
-            self.running = False
+
 
     def draw(self):
         self.player.draw(self.screen, (0, 0, 0))
@@ -318,3 +318,75 @@ class Game:
                 txt.set_alpha(alpha)
                 rect = txt.get_rect(center=(x, y))
                 self.screen.blit(txt, rect)
+
+    def _show_back_to_menu(self, message, color):
+        """Display an overlay with a Back to Menu button and Quit option.
+
+        Blocks until the player selects an option. If 'Back to Menu' is clicked,
+        attempt to run the Intro screen (if available) before returning.
+        """
+        try:
+            overlay = pygame.Surface((WIDTH, HEIGHT)).convert_alpha()
+            overlay.fill((0, 0, 0, 180))
+
+            big_font = pygame.font.SysFont(None, 32)
+            label = big_font.render('BACK TO MENU', True, (10, 10, 10))
+            quit_label = big_font.render('QUIT', True, (10, 10, 10))
+            padx, pady = 20, 12
+            bw = label.get_width() + padx * 2
+            bh = label.get_height() + pady * 2
+            qw = quit_label.get_width() + padx * 2
+            qh = quit_label.get_height() + pady * 2
+
+            bx = WIDTH // 2 - bw // 2
+            by = HEIGHT // 2 + 20
+            qx = WIDTH // 2 - qw // 2
+            qy = by + bh + 12
+
+            button_rect = pygame.Rect(bx, by, bw, bh)
+            quit_rect = pygame.Rect(qx, qy, qw, qh)
+
+            text_surf = self.font.render(message, True, color)
+
+            waiting = True
+            while waiting:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        return
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        if button_rect.collidepoint(event.pos):
+                            # run intro/menu then return
+                            try:
+                                from intro import Intro
+                                if Intro is not None:
+                                    Intro().run()
+                            except Exception:
+                                pass
+                            waiting = False
+                            break
+                        if quit_rect.collidepoint(event.pos):
+                            waiting = False
+                            break
+
+                from ui import draw_background
+                draw_background(self.screen, WIDTH, HEIGHT)
+                self.screen.blit(overlay, (0, 0))
+                self.screen.blit(text_surf, (WIDTH // 2 - text_surf.get_width() // 2, HEIGHT // 2 - 80))
+
+                pygame.draw.rect(self.screen, (255, 230, 140), button_rect, border_radius=8)
+                pygame.draw.rect(self.screen, (60, 60, 60), button_rect, width=2, border_radius=8)
+                self.screen.blit(label, (bx + padx, by + pady - 2))
+
+                pygame.draw.rect(self.screen, (220, 120, 120), quit_rect, border_radius=8)
+                pygame.draw.rect(self.screen, (60, 60, 60), quit_rect, width=2, border_radius=8)
+                self.screen.blit(quit_label, (qx + padx, qy + pady - 2))
+
+                pygame.display.flip()
+                self.clock.tick(30)
+        except Exception:
+            try:
+                from ui import draw_gameover
+                draw_gameover(self.screen, self.font, message, color)
+            except Exception:
+                pass
