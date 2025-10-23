@@ -33,6 +33,8 @@ class Intro:
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont(None, 34)
         self.small_font = pygame.font.SysFont(None, 22)
+        # title font for intro
+        self.title_font = pygame.font.SysFont(None, 48, bold=True)
 
         # load assets (use names that exist in the project's assets folder)
         self.bg = None  # background will be loaded via ui.draw_background which prefers assets/background.png
@@ -119,6 +121,18 @@ class Intro:
 
             # draw plane
             self.screen.blit(plane, (plane_x, plane_y))
+            # Draw centered game title during intro while plane is still on-screen
+            try:
+                if plane_x <= WIDTH:
+                    title_surf = self.title_font.render('Airdrop Survival', True, (255, 240, 200))
+                    tx = WIDTH // 2 - title_surf.get_width() // 2
+                    ty = HEIGHT // 2 - title_surf.get_height() // 2
+                    # draw a subtle shadow for readability
+                    shadow = self.title_font.render('Airdrop Survival', True, (30, 30, 30))
+                    self.screen.blit(shadow, (tx + 2, ty + 2))
+                    self.screen.blit(title_surf, (tx, ty))
+            except Exception:
+                pass
 
             # draw drops
             for d in drops:
