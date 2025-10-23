@@ -12,6 +12,12 @@ from settings import LEVELS, CAN_IMAGE
 class Game:
     def __init__(self):
         pygame.init()
+        # initialize sounds for drops and pickups (safe to call even if mixer already init)
+        try:
+            import drop as drop_module
+            drop_module.init_sounds()
+        except Exception:
+            pass
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("Airdrop Survival")
         self.clock = pygame.time.Clock()
@@ -98,14 +104,32 @@ class Game:
             if drop.rect.colliderect(self.player.rect):
                 if drop.type == "bomb":
                     self.hearts -= 1
+                    # play bomb explosion sound
+                    try:
+                        import drop as drop_module
+                        drop_module.play_bomb()
+                    except Exception:
+                        pass
                     # show hurt overlay for ~2 seconds
                     self.player.set_hurt(2)
                 elif drop.type == "coin":
                     self.coins += 1
+                    # play coin pickup sound
+                    try:
+                        import drop as drop_module
+                        drop_module.play_coin()
+                    except Exception:
+                        pass
                     # add coin pop at player's position
                     self.coin_pops.append((self.player.rect.centerx, self.player.rect.top, pygame.time.get_ticks(), "+1"))
                 elif drop.type == "health_pack" and self.hearts < 3:
                     self.hearts += 1
+                    # play heal pickup sound
+                    try:
+                        import drop as drop_module
+                        drop_module.play_heal()
+                    except Exception:
+                        pass
                 self.drops.remove(drop)
             elif drop.y > HEIGHT:
                 self.drops.remove(drop)
@@ -329,10 +353,11 @@ class Game:
             overlay = pygame.Surface((WIDTH, HEIGHT)).convert_alpha()
             overlay.fill((0, 0, 0, 180))
 
+            # Match intro ENTER GAME styling: font size, color, padding, border
             big_font = pygame.font.SysFont(None, 32)
             label = big_font.render('BACK TO MENU', True, (10, 10, 10))
             quit_label = big_font.render('QUIT', True, (10, 10, 10))
-            padx, pady = 20, 12
+            padx, pady = 20, 14
             bw = label.get_width() + padx * 2
             bh = label.get_height() + pady * 2
             qw = quit_label.get_width() + padx * 2
@@ -374,13 +399,19 @@ class Game:
                 self.screen.blit(overlay, (0, 0))
                 self.screen.blit(text_surf, (WIDTH // 2 - text_surf.get_width() // 2, HEIGHT // 2 - 80))
 
-                pygame.draw.rect(self.screen, (255, 230, 140), button_rect, border_radius=8)
-                pygame.draw.rect(self.screen, (60, 60, 60), button_rect, width=2, border_radius=8)
-                self.screen.blit(label, (bx + padx, by + pady - 2))
+                # draw main button with same look as intro's ENTER GAME
+                pygame.draw.rect(self.screen, (255, 230, 140), button_rect, border_radius=10)
+                pygame.draw.rect(self.screen, (60, 60, 60), button_rect, width=3, border_radius=10)
+                self.screen.blit(label, (bx + padx, by + pady - 1))
 
-                pygame.draw.rect(self.screen, (220, 120, 120), quit_rect, border_radius=8)
-                pygame.draw.rect(self.screen, (60, 60, 60), quit_rect, width=2, border_radius=8)
-                self.screen.blit(quit_label, (qx + padx, qy + pady - 2))
+                # draw quit button using inverted colors (swap bg/text)
+                # previous quit bg was (255,230,140) and text was (10,10,10)
+                # swap so bg becomes dark and text becomes light
+                pygame.draw.rect(self.screen, (60, 60, 60), quit_rect, border_radius=10)
+                pygame.draw.rect(self.screen, (255, 230, 140), quit_rect, width=3, border_radius=10)
+                # render quit label in the former bg color for contrast
+                quit_label = big_font.render('QUIT', True, (255, 230, 140))
+                self.screen.blit(quit_label, (qx + padx, qy + pady - 1))
 
                 pygame.display.flip()
                 self.clock.tick(30)

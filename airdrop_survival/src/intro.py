@@ -28,6 +28,13 @@ class Intro:
     def __init__(self):
         # initialize basic pygame subsystems (Game also does this, but safe here)
         pygame.init()
+        # ensure mixer is initialized (some platforms require explicit init)
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+        except Exception:
+            # if mixer init fails, continue without sound
+            pass
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption('Airdrop Survival - Intro')
         self.clock = pygame.time.Clock()
@@ -43,6 +50,109 @@ class Intro:
         self.health_img = _load_asset('health_pack.png') or _load_asset('medkit.png')
         self.bomb_img = _load_asset('bomb.png')
 
+        # load sounds from assets/sounds/
+        self.plane_sound = None
+        self.drop_sound = None
+        try:
+            base = os.path.join(os.path.dirname(__file__), '..', 'assets')
+            # sound files placed by user in assets/sounds/ (prefer these mp3s)
+            sounds_dir = os.path.join(base, 'sounds')
+            plane_mp3 = os.path.join(sounds_dir, 'plane_loop.mp3')
+            plane_wav = os.path.join(sounds_dir, 'plane_loop.wav')
+            drop_mp3 = os.path.join(sounds_dir, 'drop_thud.mp3')
+            drop_wav = os.path.join(sounds_dir, 'drop_thud.wav')
+
+            # Load plane sound: prefer plane_loop.mp3 -> plane_loop.wav -> assets/airplane-engine-sound-2-67757.mp3
+            if os.path.exists(plane_mp3):
+                try:
+                    print(f"intro: loading plane sound from {plane_mp3}")
+                    self.plane_sound = pygame.mixer.Sound(plane_mp3)
+                    # apply global volume/mute
+                    try:
+                        from settings import SOUND_VOLUME, SOUND_MUTED
+                    except Exception:
+                        SOUND_VOLUME = 1.0; SOUND_MUTED = False
+                    vol = 0.28 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
+                    self.plane_sound.set_volume(vol)
+                    # store base plane volume for fade calculations
+                    self._plane_base_vol = vol
+                except Exception:
+                    print("intro: failed to load plane_loop.mp3")
+                    self.plane_sound = None
+            elif os.path.exists(plane_wav):
+                try:
+                    print(f"intro: loading plane sound from {plane_wav}")
+                    self.plane_sound = pygame.mixer.Sound(plane_wav)
+                    try:
+                        from settings import SOUND_VOLUME, SOUND_MUTED
+                    except Exception:
+                        SOUND_VOLUME = 1.0; SOUND_MUTED = False
+                    vol = 0.35 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
+                    self.plane_sound.set_volume(vol)
+                    self._plane_base_vol = vol
+                except Exception:
+                    print("intro: failed to load plane_loop.wav")
+                    self.plane_sound = None
+            else:
+                preferred_mp3 = os.path.join(base, 'airplane-engine-sound-2-67757.mp3')
+                if os.path.exists(preferred_mp3):
+                    try:
+                        print(f"intro: loading fallback plane sound from {preferred_mp3}")
+                        self.plane_sound = pygame.mixer.Sound(preferred_mp3)
+                        try:
+                            from settings import SOUND_VOLUME, SOUND_MUTED
+                        except Exception:
+                            SOUND_VOLUME = 1.0; SOUND_MUTED = False
+                        vol = 0.28 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
+                        self.plane_sound.set_volume(vol)
+                        self._plane_base_vol = vol
+                    except Exception:
+                        print("intro: failed to load fallback airplane mp3")
+                        self.plane_sound = None
+
+            # Load drop sound: prefer drop_thud.mp3 -> drop_thud.wav -> assets/impact-258054.mp3
+            if os.path.exists(drop_mp3):
+                try:
+                    print(f"intro: loading drop sound from {drop_mp3}")
+                    self.drop_sound = pygame.mixer.Sound(drop_mp3)
+                    try:
+                        from settings import SOUND_VOLUME, SOUND_MUTED
+                    except Exception:
+                        SOUND_VOLUME = 1.0; SOUND_MUTED = False
+                    vol = 0.95 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
+                    self.drop_sound.set_volume(vol)
+                except Exception:
+                    print("intro: failed to load drop_thud.mp3")
+                    self.drop_sound = None
+            elif os.path.exists(drop_wav):
+                try:
+                    print(f"intro: loading drop sound from {drop_wav}")
+                    self.drop_sound = pygame.mixer.Sound(drop_wav)
+                    try:
+                        from settings import SOUND_VOLUME, SOUND_MUTED
+                    except Exception:
+                        SOUND_VOLUME = 1.0; SOUND_MUTED = False
+                    vol = 0.95 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
+                    self.drop_sound.set_volume(vol)
+                except Exception:
+                    print("intro: failed to load drop_thud.wav")
+                    self.drop_sound = None
+            else:
+                impact_mp3 = os.path.join(base, 'impact-258054.mp3')
+                if os.path.exists(impact_mp3):
+                    try:
+                        print(f"intro: loading fallback drop sound from {impact_mp3}")
+                        self.drop_sound = pygame.mixer.Sound(impact_mp3)
+                        self.drop_sound.set_volume(0.9)
+                    except Exception:
+                        print("intro: failed to load fallback impact mp3")
+                        self.drop_sound = None
+        except Exception:
+            self.plane_sound = None
+            self.drop_sound = None
+        # fade control state
+        self.plane_fade_start = None
+        self.PLANE_FADE_MS = 800
     def run(self):
         # prepare plane surface
         plane = self.plane_img
@@ -71,6 +181,14 @@ class Intro:
         button_rect = None
         show_button = False
         dark_shown_at = None
+        # play looping plane sound if available
+        plane_channel = None
+        try:
+            if self.plane_sound is not None:
+                plane_channel = self.plane_sound.play(loops=-1)
+                # some pygame builds return None for channel; guard usage later
+        except Exception:
+            plane_channel = None
 
         while running:
             for event in pygame.event.get():
@@ -195,6 +313,25 @@ class Intro:
 
         # brief pause before returning to main
         pygame.time.wait(100)
+        # fade out or stop plane sound
+        try:
+            if plane_channel is not None:
+                try:
+                    plane_channel.fadeout(300)
+                except Exception:
+                    try:
+                        plane_channel.stop()
+                    except Exception:
+                        pass
+            else:
+                # if we don't have a channel but have the sound, attempt to stop all
+                if self.plane_sound is not None:
+                    try:
+                        self.plane_sound.stop()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
     def _spawn_drops(self, cx, cy, drops):
         # spawn bomb (left), coin(center), health(right)
@@ -219,6 +356,12 @@ class Intro:
         drops.append({'surf': sb, 'x': cx - spacing, 'y': cy, 'vy': 2.6, 'type': 'bomb'})
         drops.append({'surf': sc, 'x': cx, 'y': cy, 'vy': 2.0, 'type': 'coin'})
         drops.append({'surf': sh, 'x': cx + spacing, 'y': cy, 'vy': 2.2, 'type': 'health'})
+        # play a drop sound to emphasize the release
+        try:
+            if getattr(self, 'drop_sound', None) is not None:
+                self.drop_sound.play()
+        except Exception:
+            pass
 
     def _spawn_drops_random(self, cx, cy, drops):
         """Spawn a randomized set of drops around (cx, cy).
@@ -256,3 +399,9 @@ class Intro:
                 'vy': vy,
                 'type': kind
             })
+        # play a drop sound when spawning randomized drops
+        try:
+            if getattr(self, 'drop_sound', None) is not None:
+                self.drop_sound.play()
+        except Exception:
+            pass

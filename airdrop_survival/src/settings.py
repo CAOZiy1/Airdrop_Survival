@@ -98,3 +98,9 @@ INTRO_DROP_PAUSE = True
 INTRO_DROP_PAUSE_MS = 100
 # Advance drop triggers by this many pixels (positive = trigger earlier)
 INTRO_DROP_TRIGGER_ADVANCE = 90
+
+# Global sound settings
+# Master volume applied to all sounds (0.0 = silent, 1.0 = full)
+SOUND_VOLUME = 1.0
+# Mute flag: when True all sounds will be silenced regardless of SOUND_VOLUME
+SOUND_MUTED = False

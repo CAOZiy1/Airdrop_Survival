@@ -11,6 +11,69 @@ _IMG_BOMB = None
 _IMG_COIN = None
 _IMG_HEALTH = None
 
+# Module-level sound cache (initialized by init_sounds)
+_COIN_SOUND = None
+_BOMB_SOUND = None
+_HEAL_SOUND = None
+
+def init_sounds():
+    """Initialize pygame mixer and load pickup/explosion sounds from assets/sounds/"""
+    global _COIN_SOUND, _BOMB_SOUND, _HEAL_SOUND
+    try:
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+    except Exception:
+        pass
+    base = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sounds')
+    def _load(name, vol=0.8):
+        wav = os.path.join(base, name + '.wav')
+        mp3 = os.path.join(base, name + '.mp3')
+        for p in (wav, mp3):
+            if os.path.exists(p):
+                try:
+                    s = pygame.mixer.Sound(p)
+                    s.set_volume(vol)
+                    print(f"drop: loaded sound {p}")
+                    return s
+                except Exception:
+                    print(f"drop: failed to load sound {p}")
+        return None
+
+    # apply global volume/mute from settings if available
+    try:
+        from settings import SOUND_VOLUME, SOUND_MUTED
+    except Exception:
+        SOUND_VOLUME = 1.0
+        SOUND_MUTED = False
+
+    def _vol(v):
+        return 0.0 if SOUND_MUTED else max(0.0, min(1.0, float(v) * float(SOUND_VOLUME)))
+
+    _COIN_SOUND = _load('coin_pickup', vol=_vol(0.7))
+    _BOMB_SOUND = _load('bomb_explosion', vol=_vol(1.0))
+    _HEAL_SOUND = _load('heal_pickup', vol=_vol(0.8))
+
+def play_coin():
+    try:
+        if _COIN_SOUND:
+            _COIN_SOUND.play()
+    except Exception:
+        pass
+
+def play_bomb():
+    try:
+        if _BOMB_SOUND:
+            _BOMB_SOUND.play()
+    except Exception:
+        pass
+
+def play_heal():
+    try:
+        if _HEAL_SOUND:
+            _HEAL_SOUND.play()
+    except Exception:
+        pass
+
 def _load_images():
     global _IMG_BOMB, _IMG_COIN, _IMG_HEALTH
     base = os.path.join(os.path.dirname(__file__), '..', 'assets')
