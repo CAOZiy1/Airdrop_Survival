@@ -76,6 +76,18 @@ class Game:
         self.coin_pops = []
         # small font for coin pop text
         self.font_small = pygame.font.SysFont(None, 24)
+        # control hint: show shortly after entering the game (appears after Intro)
+        try:
+            self.control_hint_duration_ms = 3000
+            self.control_hint_end = pygame.time.get_ticks() + self.control_hint_duration_ms
+            # larger font and text positioned slightly above center when shown
+            self.control_hint_font = pygame.font.SysFont(None, 30)
+            self.control_hint_text = "PRESS A/D KEYS TO MOVE THE CHARACTER"
+        except Exception:
+            self.control_hint_duration_ms = 0
+            self.control_hint_end = 0
+            self.control_hint_font = self.font_small
+            self.control_hint_text = ""
 
     def run(self):
         while self.running:
@@ -389,6 +401,21 @@ class Game:
                 txt.set_alpha(alpha)
                 rect = txt.get_rect(center=(x, y))
                 self.screen.blit(txt, rect)
+
+        # show a brief control hint at game start (after Intro) — larger font, slightly up
+        try:
+            now_hint = pygame.time.get_ticks()
+            if getattr(self, 'control_hint_end', 0) and now_hint < self.control_hint_end:
+                hint_s = self.control_hint_font.render(self.control_hint_text, True, (255, 230, 180))
+                # slightly up relative to center
+                hx = WIDTH // 2 - hint_s.get_width() // 2
+                hy = HEIGHT // 2 - 10
+                # subtle shadow for readability
+                shadow = self.control_hint_font.render(self.control_hint_text, True, (30, 30, 30))
+                self.screen.blit(shadow, (hx + 2, hy + 2))
+                self.screen.blit(hint_s, (hx, hy))
+        except Exception:
+            pass
 
     def _show_back_to_menu(self, message, color):
         """Display an overlay with a Back to Menu button and Quit option.

@@ -272,19 +272,19 @@ class Intro:
                 dark_overlay.set_alpha(160)
                 dark_overlay.fill((0, 0, 0))
                 self.screen.blit(dark_overlay, (0, 0))
-                # 罐头图片（can.png）
+                # 罐头图片（can.png）——将图标与提示整体下移一些以和按钮垂直居中
                 can_img = _load_asset('can.png')
                 if can_img:
                     scale = int(DROP_SIZE * 1.5)
                     can_img = pygame.transform.smoothscale(can_img, (scale, scale))
                     can_x = WIDTH // 2 - can_img.get_width() // 2
-                    can_y = HEIGHT // 2 - 120
+                    # 下移约 40 像素（比之前更靠近屏幕中心），使其与下面的按钮组居中
+                    can_y = HEIGHT // 2 - 80
                     self.screen.blit(can_img, (can_x, can_y))
-                # 提示文字
+                # 提示文字（仅显示目标），相对于 can 图标下方居中
                 t1 = self.font.render('COLLECT 20 COINS FOR A CAN', True, (255, 230, 180))
-                t2 = self.font.render("LEVEL 1", True, (255, 230, 180))
-                self.screen.blit(t1, (WIDTH // 2 - t1.get_width() // 2, HEIGHT // 2 - 40))
-                self.screen.blit(t2, (WIDTH // 2 - t2.get_width() // 2, HEIGHT // 2))
+                self.screen.blit(t1, (WIDTH // 2 - t1.get_width() // 2, HEIGHT // 2 - 20))
+                # 不在 intro 中显示移动提示（将在进入游戏后显示）
                 # 按钮延迟显示
                 if pygame.time.get_ticks() - dark_shown_at > 900:
                     # 使用更大的字体
