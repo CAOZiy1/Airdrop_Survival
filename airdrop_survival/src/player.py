@@ -38,9 +38,9 @@ class Player:
     def __init__(self, x, y):
         # apply a small vertical raise so the player appears higher on screen
         # (this only shifts the rect's y; collision rect remains the same size)
-        self.outline = True  # 默认开启描边
-        self.outline_color = (0, 0, 0)  # 黑色描边
-        self.outline_width = 3  # 描边宽度
+        self.outline = True  # outline enabled by default
+        self.outline_color = (0, 0, 0)  # black outline
+        self.outline_width = 3  # outline width
         self.rect = pygame.Rect(x, y - PLAYER_VERTICAL_RAISE, PLAYER_WIDTH, PLAYER_HEIGHT)
         if _PLAYER_IMG is None and _HURT_IMG is None and _DEAD_IMG is None:
             _load_player_images()

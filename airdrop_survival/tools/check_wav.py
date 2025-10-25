@@ -43,7 +43,7 @@ def print_info(path: str):
         print(f"pygame init/load failed: {e}")
 
 if __name__ == "__main__":
-    base = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'airdrop_survival', 'assets', 'sounds'))
+    base = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'assets', 'sounds'))
     print_info(os.path.join(base, 'success.wav'))
     print_info(os.path.join(base, 'failure.wav'))
     print("\nDone.")

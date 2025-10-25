@@ -5,7 +5,7 @@ Behavior:
 - Uses assets/background.png as the background.
 - Loads airplane.png and other drop images (coin.png, health_pack.png, bomb.png).
 - Plane flies left->right; when crossing center it drops three items.
-- After drop, shows two hint lines and an "进入游戏" button. Clicking it returns control.
+- After drop, shows two hint lines and an "ENTER GAME" button. Clicking it returns control.
 """
 import os
 import pygame
@@ -263,35 +263,36 @@ class Intro:
                     color = (212, 175, 55) if d['type'] == 'coin' else (200, 80, 80) if d['type'] == 'bomb' else (180, 255, 180)
                     pygame.draw.circle(self.screen, color, (int(d['x']), int(d['y']) + 8), 10)
 
-            # 飞机完全飞出画面后，先变暗和显示提示，延迟后再显示按钮
+            # After the plane fully leaves the screen, dim the scene and show a hint,
+            # then display the button after a short delay.
             if plane_x > WIDTH + 20:
                 if dark_shown_at is None:
                     dark_shown_at = pygame.time.get_ticks()
-                # 画面变暗
+                # Dim the screen
                 dark_overlay = pygame.Surface((WIDTH, HEIGHT))
                 dark_overlay.set_alpha(160)
                 dark_overlay.fill((0, 0, 0))
                 self.screen.blit(dark_overlay, (0, 0))
-                # 罐头图片（can.png）——将图标与提示整体下移一些以和按钮垂直居中
+                # Can icon (can.png) — move the icon and hint down slightly to vertically align with the buttons
                 can_img = _load_asset('can.png')
                 if can_img:
                     scale = int(DROP_SIZE * 1.5)
                     can_img = pygame.transform.smoothscale(can_img, (scale, scale))
                     can_x = WIDTH // 2 - can_img.get_width() // 2
-                    # 下移约 40 像素（比之前更靠近屏幕中心），使其与下面的按钮组居中
+                    # Move down about 40 pixels (closer to center), aligning with the button group
                     can_y = HEIGHT // 2 - 80
                     self.screen.blit(can_img, (can_x, can_y))
-                # 提示文字（仅显示目标），在原位置基础上下移使其更靠近 can 图标并与按钮组更居中
+                # Hint text (only the objective). Move it down a bit so it sits closer to the can icon and button group
                 t1 = self.font.render('COLLECT 20 COINS FOR A CAN', True, (255, 230, 180))
-                # 从之前的 HEIGHT//2 - 20 下移到 HEIGHT//2 + 10
+                # Move from HEIGHT//2 - 20 to HEIGHT//2 + 10
                 self.screen.blit(t1, (WIDTH // 2 - t1.get_width() // 2, HEIGHT // 2 + 10))
-                # 不在 intro 中显示移动提示（将在进入游戏后显示）
-                # 按钮延迟显示
+                # Don't show the movement hint in the intro (it will be shown in-game)
+                # Delay showing the button
                 if pygame.time.get_ticks() - dark_shown_at > 900:
-                    # 使用更大的字体
+                    # Use a larger font
                     big_font = pygame.font.SysFont(None, 32)
                     label = big_font.render('ENTER GAME', True, (10, 10, 10))
-                    padx, pady = 20, 14  # 增加内边距
+                    padx, pady = 20, 14  # increase inner padding
                     bw = label.get_width() + padx * 2
                     bh = label.get_height() + pady * 2
                     bx = WIDTH // 2 - bw // 2

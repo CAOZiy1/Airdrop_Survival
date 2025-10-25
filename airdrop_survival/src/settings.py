@@ -1,11 +1,11 @@
 # src/settings.py
 
-# 屏幕尺寸
+# Screen size
 WIDTH = 800
 HEIGHT = 600
 
 
-# 玩家设置
+# Player settings
 PLAYER_WIDTH = 90
 PLAYER_HEIGHT = 90
 PLAYER_SPEED = 5
@@ -18,7 +18,7 @@ PLAYER_VERTICAL_RAISE = 25
 
 MAX_HEALTH = 3
 
-# 投掷物设置
+# Drop settings
 DROP_SIZE = 48
 DROP_TYPES = ["bomb", "coin", "health_pack"]
 # Weights for DROP_TYPES selection. Higher means more likely.

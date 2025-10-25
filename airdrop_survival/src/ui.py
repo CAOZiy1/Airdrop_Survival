@@ -151,9 +151,9 @@ def draw_status(screen, font, hearts, coins, hunger=None, time_left_seconds=None
 
     # ...existing code...
 
-    # 右上角静态显示罐头图标（始终在最顶层）
+    # Static can icon at top-right (always on top)
     global _IMG_CAN
-    # 只在首次需要时加载罐头图片，避免每帧重复加载
+    # Load the can image lazily on first use to avoid reloading every frame
     if _IMG_CAN is None:
         try:
             base = os.path.join(os.path.dirname(__file__), '..', 'assets')
@@ -168,21 +168,20 @@ def draw_status(screen, font, hearts, coins, hunger=None, time_left_seconds=None
         can_x = WIDTH - can_size - 10
         can_y = 10
         screen.blit(can_img, (can_x, can_y))
-
-        # 在罐头图标正下方绘制“20”加金币图标
+        # Draw "20" plus a coin icon under the can image
     coin_size = int(22 * 0.8)
     coin_y = can_y + can_size + 4
     coin_x = can_x + (can_size - coin_size) // 2 + 8
-    # 小号字体绘制黑色“20”
+    # Render black "20" in a small font
     font_small = pygame.font.SysFont(None, 22)
     label_surface = font_small.render("20", True, (0, 0, 0))
-    space = 6  # 空格距离
+    space = 6  # gap spacing
     label_x = can_x + (can_size - coin_size) // 2 - label_surface.get_width() + 8
     label_y = coin_y + (coin_size - label_surface.get_height()) // 2
     screen.blit(label_surface, (label_x, label_y))
     coin_x = label_x + label_surface.get_width() + space
-        # 绘制金币图标
-    # global声明已在函数顶部
+        # Draw coin icon
+    # global declaration is at the top of this function
     coin_img = None
     if _IMG_COIN:
         coin_img = pygame.transform.smoothscale(_IMG_COIN, (coin_size, coin_size))

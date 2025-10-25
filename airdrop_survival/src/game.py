@@ -18,26 +18,36 @@ class Game:
             drop_module.init_sounds()
         except Exception:
             pass
-        # Try to start background music if available (quietly ignore failures)
+        # Try to start background music if available (prefer user bgm.mp3, else urgent_bgm.wav)
         try:
             if not pygame.mixer.get_init():
                 pygame.mixer.init()
-            try:
-                from audio import ensure_urgent_bgm
-                import os
-                base = os.path.join(os.path.dirname(__file__), '..', 'assets')
-                bgm_path = ensure_urgent_bgm(os.path.join(base, 'sounds', 'urgent_bgm.wav'))
-            except Exception:
-                bgm_path = None
-            if bgm_path:
-                pygame.mixer.music.load(bgm_path)
+            import os
+            sounds_base = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sounds')
+            # Prefer a user-provided bgm.mp3 if present
+            preferred_bgm = os.path.join(sounds_base, 'bgm.mp3')
+            bgm_path = None
+            if os.path.exists(preferred_bgm):
+                bgm_path = preferred_bgm
+            else:
                 try:
-                    from settings import SOUND_VOLUME, SOUND_MUTED
-                    vol = 0.6 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
+                    # Fallback: ensure or synthesize urgent_bgm.wav
+                    from audio import ensure_urgent_bgm
+                    bgm_path = ensure_urgent_bgm(os.path.join(sounds_base, 'urgent_bgm.wav'))
                 except Exception:
-                    vol = 0.6
-                pygame.mixer.music.set_volume(vol)
-                pygame.mixer.music.play(loops=-1)
+                    bgm_path = None
+            if bgm_path:
+                try:
+                    pygame.mixer.music.load(bgm_path)
+                    try:
+                        from settings import SOUND_VOLUME, SOUND_MUTED
+                        vol = 0.6 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
+                    except Exception:
+                        vol = 0.6
+                    pygame.mixer.music.set_volume(vol)
+                    pygame.mixer.music.play(loops=-1)
+                except Exception:
+                    pass
         except Exception:
             pass
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -57,7 +67,7 @@ class Game:
         self.level = LEVELS[self.level_index] if LEVELS else None
         self.level_end_time = self.start_ticks + (self.level['time_seconds'] * 1000) if self.level else None
         self.level_active = True if self.level else False
-        # 不再显示关卡开始提示，直接进入游戏
+    # Skip level-start banner; jump directly into gameplay
         # visual feedback: floating pop texts as list of tuples
         # tuple formats supported for backward compatibility:
         #  (x, start_y, start_ms)                   -> text '+1', yellow
@@ -318,7 +328,7 @@ class Game:
                 except Exception:
                     pass
                 # show success UI with can image
-                draw_level_result(self.screen, self.font, f"Congratulations! You got a {reward.get('type', '奖励')}", success=True, reward_image=reward_img)
+                draw_level_result(self.screen, self.font, f"Congratulations! You got a {reward.get('type', 'can')}", success=True, reward_image=reward_img)
                 # advance to next level if available
                 if self.level_index + 1 < len(LEVELS):
                     self.level_index += 1
