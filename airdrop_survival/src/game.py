@@ -18,15 +18,10 @@ class Game:
             drop_module.init_sounds()
         except Exception:
             pass
-        # Prepare and play urgent gameplay BGM (generate file at runtime if missing)
+        # Try to start background music if available (quietly ignore failures)
         try:
-            # ensure mixer is available
-            try:
-                if not pygame.mixer.get_init():
-                    pygame.mixer.init()
-            except Exception:
-                pass
-            # synthesizer will create assets/sounds/urgent_bgm.wav if needed
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
             try:
                 from audio import ensure_urgent_bgm
                 import os
@@ -34,24 +29,15 @@ class Game:
                 bgm_path = ensure_urgent_bgm(os.path.join(base, 'sounds', 'urgent_bgm.wav'))
             except Exception:
                 bgm_path = None
-
             if bgm_path:
+                pygame.mixer.music.load(bgm_path)
                 try:
-                    # load via music API so it streams and loops efficiently
-                    pygame.mixer.music.load(bgm_path)
-                    try:
-                        from settings import SOUND_VOLUME, SOUND_MUTED
-                    except Exception:
-                        SOUND_VOLUME = 1.0; SOUND_MUTED = False
+                    from settings import SOUND_VOLUME, SOUND_MUTED
                     vol = 0.6 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
-                    try:
-                        pygame.mixer.music.set_volume(vol)
-                    except Exception:
-                        pass
-                    pygame.mixer.music.play(loops=-1)
                 except Exception:
-                    # if music fails to load/play, ignore and continue
-                    pass
+                    vol = 0.6
+                pygame.mixer.music.set_volume(vol)
+                pygame.mixer.music.play(loops=-1)
         except Exception:
             pass
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -80,61 +66,12 @@ class Game:
         self.coin_pops = []
         # small font for coin pop text (increased to 30 per user request)
         self.font_small = pygame.font.SysFont(None, 30)
-        # control hint: show shortly after entering the game (appears after Intro)
-        try:
-            # show control hint a bit longer so players can read it
-            self.control_hint_duration_ms = 5000
-            self.control_hint_end = pygame.time.get_ticks() + self.control_hint_duration_ms
-            # Prefer to use the game's SysFont so the hint matches other UI text
-            hint_size = 28
-            base_font = pygame.font.SysFont(None, hint_size, bold=True)
-
-            # Always use the base font for the main text so it remains visually unified.
-            # Try to find a separate arrow-capable font for the ←/→ glyphs; if found,
-            # we'll render the arrows using that font and keep other text in base_font.
-            self.control_hint_font = base_font
-            self.control_hint_arrow_font = None
-            self.control_hint_use_unicode = False
-
-            candidates = ['Segoe UI Symbol', 'Segoe UI', 'DejaVu Sans', 'Noto Sans', 'Symbola', 'Arial Unicode MS', 'FreeSerif']
-            found_path = None
-            for name in candidates:
-                try:
-                    path = pygame.font.match_font(name)
-                    if not path:
-                        continue
-                    tmp = pygame.font.Font(path, hint_size)
-                    # test metrics for arrows
-                    try:
-                        m_left = tmp.metrics('←')
-                        m_right = tmp.metrics('→')
-                        ok_left = (m_left is not None and len(m_left) > 0 and m_left[0] is not None)
-                        ok_right = (m_right is not None and len(m_right) > 0 and m_right[0] is not None)
-                    except Exception:
-                        ok_left = ok_right = False
-                    if ok_left and ok_right:
-                        found_path = path
-                        break
-                except Exception:
-                    continue
-
-            if found_path:
-                try:
-                    self.control_hint_arrow_font = pygame.font.Font(found_path, hint_size)
-                    self.control_hint_use_unicode = True
-                except Exception:
-                    self.control_hint_arrow_font = None
-                    self.control_hint_use_unicode = False
-
-            # split main hint text into parts around the arrows so we can render arrows with
-            # a separate font while keeping other text in the unified base font.
-            self.control_hint_text_before = "PRESS "
-            self.control_hint_text_after = " OR A/D KEYS TO MOVE THE CHARACTER"
-        except Exception:
-            self.control_hint_duration_ms = 0
-            self.control_hint_end = 0
-            self.control_hint_font = self.font_small
-            self.control_hint_text = ""
+        # control hint: show shortly after entering the game (concise implementation)
+        self.control_hint_duration_ms = 5000
+        self.control_hint_end = pygame.time.get_ticks() + self.control_hint_duration_ms
+        self.control_hint_font = pygame.font.SysFont(None, 28)
+        # Use a single compact ASCII hint to avoid complex font probing
+        self.control_hint_text = "PRESS <-/-> OR A/D TO MOVE"
 
     def run(self):
         while self.running:
@@ -477,128 +414,12 @@ class Game:
         try:
             now_hint = pygame.time.get_ticks()
             if getattr(self, 'control_hint_end', 0) and now_hint < self.control_hint_end:
-                # If we have a Unicode-capable font, render the arrow glyphs directly
-                if getattr(self, 'control_hint_use_unicode', False) and getattr(self, 'control_hint_arrow_font', None):
-                    # Mixed-font rendering: main text (unified UI font) + arrow glyphs from arrow-capable font
-                    try:
-                        color = (255, 230, 180)
-                        shadow_color = (30, 30, 30)
-
-                        t_before = self.control_hint_font.render(self.control_hint_text_before, True, color)
-                        t_after = self.control_hint_font.render(self.control_hint_text_after, True, color)
-
-                        # arrows rendered with the arrow-capable font
-                        arrow_l = self.control_hint_arrow_font.render('←', True, color)
-                        # slash between arrows for clarity; render with base font (should exist)
-                        slash = self.control_hint_font.render('/', True, color)
-                        arrow_r = self.control_hint_arrow_font.render('→', True, color)
-
-                        total_w = t_before.get_width() + arrow_l.get_width() + slash.get_width() + arrow_r.get_width() + t_after.get_width()
-                        hx = WIDTH // 2 - total_w // 2
-                        hy = HEIGHT // 2 - 10
-
-                        # compute vertical centering so arrows align with text baseline visually
-                        pieces = [t_before, arrow_l, slash, arrow_r, t_after]
-                        try:
-                            heights = [p.get_height() for p in pieces]
-                            base_h = max(heights) if heights else 0
-                            center_y = hy + base_h // 2
-
-                            # draw shadows for each piece at y centered on center_y
-                            x = hx
-                            # small upward nudge for arrow glyphs to visually align with text
-                            # adjusted: -4 to move arrows 1px down from previous -5
-                            arrow_vertical_nudge = -4
-                            shadow_surfaces = [
-                                self.control_hint_font.render(self.control_hint_text_before, True, shadow_color),
-                                self.control_hint_arrow_font.render('←', True, shadow_color),
-                                self.control_hint_font.render('/', True, shadow_color),
-                                self.control_hint_arrow_font.render('→', True, shadow_color),
-                                self.control_hint_font.render(self.control_hint_text_after, True, shadow_color),
-                            ]
-                            for idx, s in enumerate(shadow_surfaces):
-                                # index 1 and 3 are arrow glyphs
-                                y_s = center_y - s.get_height() // 2
-                                if idx in (1, 3):
-                                    y_s += arrow_vertical_nudge
-                                self.screen.blit(s, (x + 2, y_s + 2))
-                                x += s.get_width()
-
-                            # blit main pieces centered vertically, applying same nudge for arrows
-                            x = hx
-                            for idx, p in enumerate(pieces):
-                                y_p = center_y - p.get_height() // 2
-                                if idx in (1, 3):
-                                    y_p += arrow_vertical_nudge
-                                self.screen.blit(p, (x, y_p))
-                                x += p.get_width()
-                        except Exception:
-                            # fallback to previous simple blit if centering fails
-                            try:
-                                x = hx
-                                self.screen.blit(t_before, (x, hy)); x += t_before.get_width()
-                                self.screen.blit(arrow_l, (x, hy)); x += arrow_l.get_width()
-                                self.screen.blit(slash, (x, hy)); x += slash.get_width()
-                                self.screen.blit(arrow_r, (x, hy)); x += arrow_r.get_width()
-                                self.screen.blit(t_after, (x, hy))
-                            except Exception:
-                                pass
-                    except Exception:
-                        # fall back to simple rendering if anything unexpected happens
-                        try:
-                            hint_s = self.control_hint_font.render('PRESS ←/→ OR A/D KEYS TO MOVE THE CHARACTER', True, (255, 230, 180))
-                            hx = WIDTH // 2 - hint_s.get_width() // 2
-                            hy = HEIGHT // 2 - 10
-                            shadow = self.control_hint_font.render('PRESS ←/→ OR A/D KEYS TO MOVE THE CHARACTER', True, (30, 30, 30))
-                            self.screen.blit(shadow, (hx + 2, hy + 2))
-                            self.screen.blit(hint_s, (hx, hy))
-                        except Exception:
-                            pass
-                else:
-                    # Render ASCII text and draw small triangle arrows on both sides
-                    hint_s = self.control_hint_font.render(self.control_hint_text, True, (255, 230, 180))
-                    hx = WIDTH // 2 - hint_s.get_width() // 2
-                    hy = HEIGHT // 2 - 10
-
-                    # draw arrows (triangles)
-                    try:
-                        arrow_size = 12
-                        arrow_gap = 8
-                        half = arrow_size // 2
-                        cy = hy + hint_s.get_height() // 2
-
-                        ax_left = hx - arrow_gap - arrow_size
-                        left_points = [
-                            (ax_left + arrow_size, cy - half),
-                            (ax_left + arrow_size, cy + half),
-                            (ax_left, cy),
-                        ]
-                        ax_right = hx + hint_s.get_width() + arrow_gap
-                        right_points = [
-                            (ax_right, cy - half),
-                            (ax_right, cy + half),
-                            (ax_right + arrow_size, cy),
-                        ]
-
-                        # shadow for arrows
-                        try:
-                            pygame.draw.polygon(self.screen, (30, 30, 30), [(x + 2, y + 2) for (x, y) in left_points])
-                            pygame.draw.polygon(self.screen, (30, 30, 30), [(x + 2, y + 2) for (x, y) in right_points])
-                        except Exception:
-                            pass
-
-                        pygame.draw.polygon(self.screen, (255, 230, 180), left_points)
-                        pygame.draw.polygon(self.screen, (255, 230, 180), right_points)
-                    except Exception:
-                        pass
-
-                    # shadow and text
-                    try:
-                        shadow = self.control_hint_font.render(self.control_hint_text, True, (30, 30, 30))
-                        self.screen.blit(shadow, (hx + 2, hy + 2))
-                    except Exception:
-                        pass
-                    self.screen.blit(hint_s, (hx, hy))
+                hint_s = self.control_hint_font.render(self.control_hint_text, True, (255, 230, 180))
+                shadow = self.control_hint_font.render(self.control_hint_text, True, (30, 30, 30))
+                hx = WIDTH // 2 - hint_s.get_width() // 2
+                hy = HEIGHT // 2 - 10
+                self.screen.blit(shadow, (hx + 2, hy + 2))
+                self.screen.blit(hint_s, (hx, hy))
         except Exception:
             pass
 
