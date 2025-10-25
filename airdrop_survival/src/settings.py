@@ -104,3 +104,7 @@ INTRO_DROP_TRIGGER_ADVANCE = 90
 SOUND_VOLUME = 1.0
 # Mute flag: when True all sounds will be silenced regardless of SOUND_VOLUME
 SOUND_MUTED = False
+
+# Whether to replay the Intro animation when returning to menu after a game session
+# If False, clicking Back to Menu -> ENTER GAME will start the game immediately without replaying the Intro.
+REPLAY_INTRO_ON_RETURN = False

@@ -74,6 +74,9 @@ class Game:
         self.control_hint_text = "PRESS <-/-> OR A/D TO MOVE"
         # Keep a reference to an ending Sound if we fall back to Sound playback
         self._ending_sound = None
+        # When handing off to a new game session from the back-to-menu overlay,
+        # avoid quitting pygame in this instance's teardown.
+        self._handoff_to_new_session = False
 
     def _play_ending_music(self, filename, loop=False):
         """Try to fade current music and play an ending music file from assets/sounds."""
@@ -189,18 +192,19 @@ class Game:
                 else:
                     # re-raise unexpected pygame errors
                     raise
-        # fade out music if playing, then quit
-        try:
+        # fade out music if playing, then quit (unless handing off to a new session)
+        if not getattr(self, '_handoff_to_new_session', False):
             try:
-                pygame.mixer.music.fadeout(800)
-            except Exception:
                 try:
-                    pygame.mixer.music.stop()
+                    pygame.mixer.music.fadeout(800)
                 except Exception:
-                    pass
-        except Exception:
-            pass
-        pygame.quit()
+                    try:
+                        pygame.mixer.music.stop()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            pygame.quit()
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -570,14 +574,36 @@ class Game:
                         return
                     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         if button_rect.collidepoint(event.pos):
-                            # run intro/menu, then immediately start a fresh game instance
+                            # optionally replay Intro depending on settings flag
                             try:
-                                from intro import Intro
-                                if Intro is not None:
-                                    Intro().run()
+                                from settings import REPLAY_INTRO_ON_RETURN
                             except Exception:
-                                pass
+                                REPLAY_INTRO_ON_RETURN = False
+                            try:
+                                import state as _state
+                            except Exception:
+                                _state = None
+                            if REPLAY_INTRO_ON_RETURN:
+                                try:
+                                    from intro import Intro
+                                    if Intro is not None:
+                                        Intro().run()
+                                except Exception:
+                                    pass
+                                if _state is not None:
+                                    try:
+                                        _state.intro_shown = True
+                                    except Exception:
+                                        pass
+                            else:
+                                # mark intro as shown so future main entry skips it
+                                if _state is not None:
+                                    try:
+                                        _state.intro_shown = True
+                                    except Exception:
+                                        pass
                             # start a new game session without exiting the app
+                            self._handoff_to_new_session = True
                             try:
                                 # create and run a new Game (use dynamic type to avoid circular import)
                                 type(self)().run()
