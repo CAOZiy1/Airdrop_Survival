@@ -18,6 +18,42 @@ class Game:
             drop_module.init_sounds()
         except Exception:
             pass
+        # Prepare and play urgent gameplay BGM (generate file at runtime if missing)
+        try:
+            # ensure mixer is available
+            try:
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init()
+            except Exception:
+                pass
+            # synthesizer will create assets/sounds/urgent_bgm.wav if needed
+            try:
+                from audio import ensure_urgent_bgm
+                import os
+                base = os.path.join(os.path.dirname(__file__), '..', 'assets')
+                bgm_path = ensure_urgent_bgm(os.path.join(base, 'sounds', 'urgent_bgm.wav'))
+            except Exception:
+                bgm_path = None
+
+            if bgm_path:
+                try:
+                    # load via music API so it streams and loops efficiently
+                    pygame.mixer.music.load(bgm_path)
+                    try:
+                        from settings import SOUND_VOLUME, SOUND_MUTED
+                    except Exception:
+                        SOUND_VOLUME = 1.0; SOUND_MUTED = False
+                    vol = 0.6 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
+                    try:
+                        pygame.mixer.music.set_volume(vol)
+                    except Exception:
+                        pass
+                    pygame.mixer.music.play(loops=-1)
+                except Exception:
+                    # if music fails to load/play, ignore and continue
+                    pass
+        except Exception:
+            pass
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("Airdrop Survival")
         self.clock = pygame.time.Clock()
@@ -65,6 +101,17 @@ class Game:
                 else:
                     # re-raise unexpected pygame errors
                     raise
+        # fade out music if playing, then quit
+        try:
+            try:
+                pygame.mixer.music.fadeout(800)
+            except Exception:
+                try:
+                    pygame.mixer.music.stop()
+                except Exception:
+                    pass
+        except Exception:
+            pass
         pygame.quit()
 
     def handle_events(self):
