@@ -281,9 +281,10 @@ class Intro:
                     # 下移约 40 像素（比之前更靠近屏幕中心），使其与下面的按钮组居中
                     can_y = HEIGHT // 2 - 80
                     self.screen.blit(can_img, (can_x, can_y))
-                # 提示文字（仅显示目标），相对于 can 图标下方居中
+                # 提示文字（仅显示目标），在原位置基础上下移使其更靠近 can 图标并与按钮组更居中
                 t1 = self.font.render('COLLECT 20 COINS FOR A CAN', True, (255, 230, 180))
-                self.screen.blit(t1, (WIDTH // 2 - t1.get_width() // 2, HEIGHT // 2 - 20))
+                # 从之前的 HEIGHT//2 - 20 下移到 HEIGHT//2 + 10
+                self.screen.blit(t1, (WIDTH // 2 - t1.get_width() // 2, HEIGHT // 2 + 10))
                 # 不在 intro 中显示移动提示（将在进入游戏后显示）
                 # 按钮延迟显示
                 if pygame.time.get_ticks() - dark_shown_at > 900:
