@@ -72,6 +72,98 @@ class Game:
         self.control_hint_font = pygame.font.SysFont(None, 28)
         # Use a single compact ASCII hint to avoid complex font probing
         self.control_hint_text = "PRESS <-/-> OR A/D TO MOVE"
+        # Keep a reference to an ending Sound if we fall back to Sound playback
+        self._ending_sound = None
+
+    def _play_ending_music(self, filename, loop=False):
+        """Try to fade current music and play an ending music file from assets/sounds."""
+        try:
+            # ensure mixer initialized
+            try:
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init()
+            except Exception:
+                pass
+            import os
+            base = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sounds')
+            p = os.path.join(base, filename)
+
+            if os.path.exists(p):
+                try:
+                    # try a short fadeout of any current music (urgent_bgm)
+                    try:
+                        pygame.mixer.music.fadeout(400)
+                    except Exception:
+                        pass
+                    # ensure music is stopped so the ending track won't be masked
+                    try:
+                        pygame.mixer.music.stop()
+                    except Exception:
+                        pass
+                    # do not stop all mixer channels here; only stop music to avoid masking
+                except Exception:
+                    try:
+                        # ensure music is stopped if fadeout is unavailable
+                        pygame.mixer.music.stop()
+                    except Exception:
+                        pass
+                # desired volume
+                try:
+                    from settings import SOUND_VOLUME, SOUND_MUTED
+                    vol = 1.0 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
+                except Exception:
+                    vol = 1.0
+                # First try streaming music API; if it fails (e.g., unknown WAVE format),
+                # fall back to Sound playback which supports more codecs in some builds.
+                played = False
+                try:
+                    pygame.mixer.music.load(p)
+                    try:
+                        pygame.mixer.music.set_volume(vol)
+                    except Exception:
+                        pass
+                    pygame.mixer.music.play(loops=-1 if loop else 0)
+                    played = True
+                    try:
+                        print(f"[ending-music] music.play {filename} (loop={loop})")
+                    except Exception:
+                        pass
+                except Exception as e:
+                    try:
+                        print(f"[ending-music] music.load failed, falling back to Sound: {e}")
+                    except Exception:
+                        pass
+                if not played:
+                    try:
+                        # Stop any prior ending Sound
+                        if getattr(self, '_ending_sound', None) is not None:
+                            try:
+                                self._ending_sound.stop()
+                            except Exception:
+                                pass
+                        snd = pygame.mixer.Sound(p)
+                        try:
+                            snd.set_volume(vol)
+                        except Exception:
+                            pass
+                        snd.play(loops=-1 if loop else 0)
+                        self._ending_sound = snd
+                        try:
+                            print(f"[ending-music] sound.play {filename} (loop={loop})")
+                        except Exception:
+                            pass
+                    except Exception as e2:
+                        try:
+                            print(f"[ending-music] sound fallback failed: {e2}")
+                        except Exception:
+                            pass
+            else:
+                try:
+                    print(f"[ending-music] file not found: {p}")
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def run(self):
         while self.running:
@@ -215,8 +307,14 @@ class Game:
             if self.coins >= coins_required:
                 # success: consume coins
                 self.coins -= coins_required
+                # play success music (uses assets/sounds/success.wav if present)
+                try:
+                    # use tracked/known filename for success music
+                    self._play_ending_music('success.wav', loop=False)
+                except Exception:
+                    pass
                 # show success UI with can image
-                draw_level_result(self.screen, self.font, f"CONGRATULATIONS! YOU GOT A {reward.get('type', '奖励')}", success=True, reward_image=reward_img)
+                draw_level_result(self.screen, self.font, f"Congratulations! You got a {reward.get('type', '奖励')}", success=True, reward_image=reward_img)
                 # advance to next level if available
                 if self.level_index + 1 < len(LEVELS):
                     self.level_index += 1
@@ -246,7 +344,12 @@ class Game:
                     self.running = False
                     return
             else:
-                # failure: show message
+                # failure: play failure music then show message
+                try:
+                    # use tracked/known filename for failure music
+                    self._play_ending_music('failure.wav', loop=False)
+                except Exception:
+                    pass
                 draw_level_result(self.screen, self.font, "Time's up! Not enough coins, challenge failed.", success=False, reward_image=None)
                 self.level_active = False
                 # show game over after failure with back-to-menu option
@@ -259,6 +362,12 @@ class Game:
             # we keep the final pause at 1500ms, so animation loop is 5500ms
             DEATH_MS = 5500
             self.player.set_dead(DEATH_MS / 1000)
+            # play failure music at start of death sequence
+            try:
+                # play failure music on death
+                self._play_ending_music('failure.wav', loop=False)
+            except Exception:
+                pass
             start = pygame.time.get_ticks()
             # animation loop for death duration; halo rises faster than total death time
             HALO_RISE_MS = 3000
@@ -461,13 +570,20 @@ class Game:
                         return
                     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         if button_rect.collidepoint(event.pos):
-                            # run intro/menu then return
+                            # run intro/menu, then immediately start a fresh game instance
                             try:
                                 from intro import Intro
                                 if Intro is not None:
                                     Intro().run()
                             except Exception:
                                 pass
+                            # start a new game session without exiting the app
+                            try:
+                                # create and run a new Game (use dynamic type to avoid circular import)
+                                type(self)().run()
+                            except Exception:
+                                pass
+                            # after the new session finishes, return from this overlay
                             waiting = False
                             break
                         if quit_rect.collidepoint(event.pos):

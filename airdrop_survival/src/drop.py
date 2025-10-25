@@ -15,6 +15,8 @@ _IMG_HEALTH = None
 _COIN_SOUND = None
 _BOMB_SOUND = None
 _HEAL_SOUND = None
+_SUCCESS_SOUND = None
+_FAIL_SOUND = None
 
 def init_sounds():
     """Initialize pygame mixer and load pickup/explosion sounds from assets/sounds/"""
@@ -52,6 +54,9 @@ def init_sounds():
     _COIN_SOUND = _load('coin_pickup', vol=_vol(0.7))
     _BOMB_SOUND = _load('bomb_explosion', vol=_vol(1.0))
     _HEAL_SOUND = _load('heal_pickup', vol=_vol(0.8))
+    # optional level sounds
+    _SUCCESS_SOUND = _load('success', vol=_vol(0.9))
+    _FAIL_SOUND = _load('failure', vol=_vol(0.9))
 
 def play_coin():
     try:
@@ -71,6 +76,21 @@ def play_heal():
     try:
         if _HEAL_SOUND:
             _HEAL_SOUND.play()
+    except Exception:
+        pass
+
+def play_success():
+    try:
+        if _SUCCESS_SOUND:
+            _SUCCESS_SOUND.play()
+    except Exception:
+        pass
+
+
+def play_failure():
+    try:
+        if _FAIL_SOUND:
+            _FAIL_SOUND.play()
     except Exception:
         pass
 
