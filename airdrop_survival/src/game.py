@@ -8,6 +8,7 @@ from settings import (
     WIDTH,
     HEIGHT,
     PLAYER_HEIGHT,
+    MAX_HEALTH,
     LEVELS,
     CAN_IMAGE,
     DROP_SPAWN_INTERVAL_BASE,
@@ -45,7 +46,7 @@ class Game:
         # position player so its bottom sits slightly above the bottom of the screen
         self.player = Player(WIDTH // 2, HEIGHT - PLAYER_HEIGHT - 10)
         self.drops = []
-        self.hearts = 3
+        self.hearts = MAX_HEALTH
         self.coins = 0
         self.running = True
         # track start time (milliseconds)
@@ -231,7 +232,7 @@ class Game:
                         pass
                     # add coin pop at player's position
                     self.coin_pops.append((self.player.rect.centerx, self.player.rect.top, pygame.time.get_ticks(), "+1"))
-                elif drop.type == "health_pack" and self.hearts < 3:
+                elif drop.type == "health_pack" and self.hearts < MAX_HEALTH:
                     self.hearts += 1
                     # heal pickup sound
                     try:
@@ -317,6 +318,9 @@ class Game:
             halo_reached_at = None
             FLASH_MS = 300
             FAST_FADE_MS = 300
+            # begin grayscale this many milliseconds before the end of the death animation
+            GRAYSCALE_WINDOW_MS = 2000
+            grayscale_start_ms = start + max(0, DEATH_MS - GRAYSCALE_WINDOW_MS)
             while pygame.time.get_ticks() - start < DEATH_MS:
                 # pump events so window remains responsive
                 for event in pygame.event.get():
@@ -385,6 +389,23 @@ class Game:
                             self.screen.blit(fade_surf, (halo_x - fade_surf.get_width() // 2, halo_y - fade_surf.get_height() // 2))
                     # after fade window, stop drawing halo
 
+                # turn the entire frame grayscale during the last seconds of the death sequence
+                if now >= grayscale_start_ms:
+                    try:
+                        import numpy as _np
+                        from pygame import surfarray as _sfa
+                        _arr = _sfa.pixels3d(self.screen)
+                        _lum = (_np.dot(_arr[..., :3], [0.2989, 0.5870, 0.1140])).astype(_arr.dtype)
+                        _arr[..., 0] = _lum
+                        _arr[..., 1] = _lum
+                        _arr[..., 2] = _lum
+                        del _arr
+                    except Exception:
+                        # fallback approximation: semi-transparent gray overlay
+                        _ov = pygame.Surface((WIDTH, HEIGHT)).convert_alpha()
+                        _ov.fill((120, 120, 120, 140))
+                        self.screen.blit(_ov, (0, 0))
+
                 pygame.display.flip()
                 self.clock.tick(30)
 
@@ -405,8 +426,13 @@ class Game:
                 overlay.fill((120, 120, 120, 150))
                 self.screen.blit(overlay, (0, 0))
 
+            # capture the desaturated frame as a static background for the menu overlay
+            try:
+                snapshot = self.screen.copy()
+            except Exception:
+                snapshot = None
             # final Game Over message after desaturation — back-to-menu option
-            self._show_back_to_menu("Game Over - You Died", (255, 0, 0))
+            self._show_back_to_menu("Game Over - You Died", (255, 0, 0), background_surface=snapshot)
             self.running = False
 
 
@@ -473,7 +499,7 @@ class Game:
         except Exception:
             pass
 
-    def _show_back_to_menu(self, message, color):
+    def _show_back_to_menu(self, message, color, background_surface=None):
         """Display an overlay with a Back to Menu button and Quit option.
 
         Blocks until the player selects an option. If 'Back to Menu' is clicked,
@@ -553,7 +579,15 @@ class Game:
                             waiting = False
                             break
 
-                draw_background(self.screen, WIDTH, HEIGHT)
+                # If a static background surface is provided (e.g., grayscale snapshot),
+                # draw it; otherwise, render the usual background.
+                if background_surface is not None:
+                    try:
+                        self.screen.blit(background_surface, (0, 0))
+                    except Exception:
+                        draw_background(self.screen, WIDTH, HEIGHT)
+                else:
+                    draw_background(self.screen, WIDTH, HEIGHT)
                 self.screen.blit(overlay, (0, 0))
                 self.screen.blit(text_surf, (WIDTH // 2 - text_surf.get_width() // 2, HEIGHT // 2 - 80))
 

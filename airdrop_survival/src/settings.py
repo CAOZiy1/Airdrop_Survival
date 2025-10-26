@@ -16,6 +16,10 @@ PLAYER_DRAW_SCALE = 1.25
 # Shift player a bit upward on spawn for nicer framing
 PLAYER_VERTICAL_RAISE = 25
 
+# Health
+# Maximum heart containers shown in the UI and clamped for healing
+MAX_HEALTH = 3
+
 # Drops
 DROP_SIZE = 48
 DROP_TYPES = ["bomb", "coin", "health_pack"]

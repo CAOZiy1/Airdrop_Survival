@@ -4,72 +4,99 @@ import pygame
 import os
 from settings import WIDTH, HEIGHT, MAX_HEALTH
 
-# Cached icon surfaces
-_HEART_ICON = None
-_COIN_ICON = None
+# Cached icon surfaces and images
+_HEART_ICON = None       # procedurally drawn heart (size _ICON_SIZE)
+_COIN_ICON = None        # procedurally drawn coin (size _ICON_SIZE)
+
+# Original loaded images (kept for rescaling if needed)
 _IMG_COIN = None
 _IMG_HEALTH = None
 _IMG_STOMACH = None
-_STOMACH_ICON = None
 _IMG_BACKGROUND = None
 _IMG_CAN = None
+
+# Scaled variants for the current UI size
+_ICON_SIZE = 24
+_COIN_IMG_SCALED = None
+_HEALTH_IMG_SCALED = None
+_STOMACH_IMG_SCALED = None
+_CAN_IMG_SCALED = None
+_SCALED_SIZE = _ICON_SIZE
+
+# Background scaled cache
+_BG_SCALED = None
+_BG_SCALED_SIZE = None
 
 # Color constants used by the UI
 RED = (200, 30, 30)
 GREEN = (50, 200, 50)
 BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
+
+def _assets_base():
+    return os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'assets'))
 
 def _load_status_images():
-    global _IMG_COIN, _IMG_HEALTH
-    global _IMG_BACKGROUND
-    global _IMG_STOMACH
-    base = os.path.join(os.path.dirname(__file__), '..', 'assets')
-    base = os.path.normpath(base)
-    # try to load background
+    """Load original UI-related images once (no scaling here)."""
+    global _IMG_COIN, _IMG_HEALTH, _IMG_BACKGROUND, _IMG_STOMACH, _IMG_CAN
+    base = _assets_base()
+
+    # Background (optional)
     try:
         pbg = os.path.join(base, 'background.png')
-        print(f"ui: loading background image from {pbg}")
-        _IMG_BACKGROUND = pygame.image.load(pbg).convert()
+        if os.path.exists(pbg):
+            _IMG_BACKGROUND = pygame.image.load(pbg).convert()
     except Exception:
         _IMG_BACKGROUND = None
+
     def _try_load_alpha(candidates):
         for name in candidates:
             p = os.path.join(base, name)
             try:
                 if os.path.exists(p):
-                    print(f"ui: loading image from {p}")
                     return pygame.image.load(p).convert_alpha()
             except Exception:
-                import traceback
-                print(f"ui: failed loading image from {p}")
-                traceback.print_exc()
+                pass
         return None
 
-    # coin image: prefer money_icon if available, then coin
-    _IMG_COIN = _try_load_alpha(['money_icon.png', 'coin.png'])
+    # Prefer these names in order
+    _IMG_COIN = _IMG_COIN or _try_load_alpha(['money_icon.png', 'coin.png'])
+    _IMG_HEALTH = _IMG_HEALTH or _try_load_alpha(['heart_icon.png', 'heart.png', 'life_icon.png', 'health_pack.png'])
+    _IMG_STOMACH = _IMG_STOMACH or _try_load_alpha(['stomach.png', 'stomach_icon.png'])
+    _IMG_CAN = _IMG_CAN or _try_load_alpha(['can.png'])
 
-    # health/heart image: prefer heart_icon if present, then heart, life_icon, then health_pack
-    _IMG_HEALTH = _try_load_alpha(['heart_icon.png', 'heart.png', 'life_icon.png', 'health_pack.png'])
-    # stomach image: accept stomach.png or stomach_icon.png
-    _IMG_STOMACH = _try_load_alpha(['stomach.png', 'stomach_icon.png'])
-    # can image for level reward
-    try:
-        can_path = os.path.join(base, 'can.png')
-        print(f"[can debug] can_path: {can_path}, exists: {os.path.exists(can_path)}")
-        if os.path.exists(can_path):
-            try:
-                _IMG_CAN = pygame.image.load(can_path).convert_alpha()
-                print("[can debug] can.png loaded successfully.")
-            except Exception as e:
-                print(f"[can debug] Failed to load can.png: {e}")
-                _IMG_CAN = None
-        else:
-            print("[can debug] can.png does not exist at path.")
-            _IMG_CAN = None
-    except Exception as e:
-        print(f"[can debug] Exception during can.png load: {e}")
-        _IMG_CAN = None
+def _ensure_scaled_icons(size):
+    """Ensure procedurally drawn icons and image-scaled variants exist for given size."""
+    global _HEART_ICON, _COIN_ICON, _COIN_IMG_SCALED, _HEALTH_IMG_SCALED, _STOMACH_IMG_SCALED, _CAN_IMG_SCALED, _SCALED_SIZE
+    if _HEART_ICON is None or _COIN_ICON is None or _SCALED_SIZE != size:
+        _HEART_ICON, _COIN_ICON = _create_icons(size=size)
+        _SCALED_SIZE = size
+        # when size changes, re-scale the bitmaps too on next call
+        _COIN_IMG_SCALED = None
+        _HEALTH_IMG_SCALED = None
+        _STOMACH_IMG_SCALED = None
+        _CAN_IMG_SCALED = None
+
+    # scale loaded images lazily
+    if _IMG_COIN is not None and _COIN_IMG_SCALED is None:
+        try:
+            _COIN_IMG_SCALED = pygame.transform.smoothscale(_IMG_COIN, (size, size))
+        except Exception:
+            _COIN_IMG_SCALED = None
+    if _IMG_HEALTH is not None and _HEALTH_IMG_SCALED is None:
+        try:
+            _HEALTH_IMG_SCALED = pygame.transform.smoothscale(_IMG_HEALTH, (size, size))
+        except Exception:
+            _HEALTH_IMG_SCALED = None
+    if _IMG_STOMACH is not None and _STOMACH_IMG_SCALED is None:
+        try:
+            _STOMACH_IMG_SCALED = pygame.transform.smoothscale(_IMG_STOMACH, (size - 4, size - 4))
+        except Exception:
+            _STOMACH_IMG_SCALED = None
+    if _IMG_CAN is not None and _CAN_IMG_SCALED is None:
+        try:
+            _CAN_IMG_SCALED = pygame.transform.smoothscale(_IMG_CAN, (int(size * 1.67), int(size * 1.67)))
+        except Exception:
+            _CAN_IMG_SCALED = None
 
 def _create_icons(size=24):
     """Create simple heart and coin icon surfaces.
@@ -103,28 +130,28 @@ def _create_icons(size=24):
 
 
 def draw_status(screen, font, hearts, coins, hunger=None, time_left_seconds=None):
-    global _HEART_ICON, _COIN_ICON, _IMG_COIN, _IMG_HEALTH
-    if _IMG_COIN is None and _IMG_HEALTH is None:
+    """Top-left hearts and coins, top-right level reward hint (can+"coins needed")."""
+    global _HEART_ICON, _COIN_ICON
+    # Ensure assets loaded and scaled once
+    if any(x is None for x in (_IMG_COIN, _IMG_HEALTH, _IMG_STOMACH, _IMG_CAN, _IMG_BACKGROUND)):
         _load_status_images()
-
-    if _HEART_ICON is None or _COIN_ICON is None:
-        _HEART_ICON, _COIN_ICON = _create_icons(size=24)
+    _ensure_scaled_icons(_ICON_SIZE)
 
     padding = 8
     x = 10
     y = 10
 
     # Draw hearts: render MAX_HEALTH icons and dim ones above current hearts
+    hearts = max(0, min(int(hearts), MAX_HEALTH))
     heart_w = _HEART_ICON.get_width()
     heart_h = _HEART_ICON.get_height()
     for i in range(MAX_HEALTH):
         hx = x + i * (heart_w + 4)
-        if _IMG_HEALTH:
-            hs = pygame.transform.smoothscale(_IMG_HEALTH, (heart_w, heart_h))
+        if _HEALTH_IMG_SCALED is not None:
             if i < hearts:
-                screen.blit(hs, (hx, y))
+                screen.blit(_HEALTH_IMG_SCALED, (hx, y))
             else:
-                tmp = hs.copy()
+                tmp = _HEALTH_IMG_SCALED.copy()
                 tmp.fill((80, 80, 80, 150), special_flags=pygame.BLEND_RGBA_MULT)
                 screen.blit(tmp, (hx, y))
         else:
@@ -140,54 +167,46 @@ def draw_status(screen, font, hearts, coins, hunger=None, time_left_seconds=None
 
     # Blit coin icon and count (to the right of heart group)
     x2 = x + text_offset + padding * 2
-    if _IMG_COIN:
-        coin_s = pygame.transform.smoothscale(_IMG_COIN, (_COIN_ICON.get_width(), _COIN_ICON.get_height()))
-        screen.blit(coin_s, (x2, y))
+    if _COIN_IMG_SCALED is not None:
+        screen.blit(_COIN_IMG_SCALED, (x2, y))
     else:
         screen.blit(_COIN_ICON, (x2, y))
     text2 = font.render(str(coins), True, BLACK)
     screen.blit(text2, (x2 + _COIN_ICON.get_width() + 4, y + (_COIN_ICON.get_height() - text2.get_height()) // 2))
 
-
-    # ...existing code...
-
-    # Static can icon at top-right (always on top)
-    global _IMG_CAN
-    # Load the can image lazily on first use to avoid reloading every frame
-    if _IMG_CAN is None:
-        try:
-            base = os.path.join(os.path.dirname(__file__), '..', 'assets')
-            can_path = os.path.join(base, 'can.png')
-            if os.path.exists(can_path):
-                _IMG_CAN = pygame.image.load(can_path).convert_alpha()
-        except Exception:
-            _IMG_CAN = None
-    if _IMG_CAN is not None:
-        can_size = 40
-        can_img = pygame.transform.smoothscale(_IMG_CAN, (can_size, can_size))
+    # Static can icon at top-right with "coins needed" label (if can image exists)
+    if _CAN_IMG_SCALED is not None:
+        can_img = _CAN_IMG_SCALED
+        can_size = can_img.get_width()
         can_x = WIDTH - can_size - 10
         can_y = 10
         screen.blit(can_img, (can_x, can_y))
-        # Draw "20" plus a coin icon under the can image
-    coin_size = int(22 * 0.8)
-    coin_y = can_y + can_size + 4
-    coin_x = can_x + (can_size - coin_size) // 2 + 8
-    # Render black "20" in a small font
-    font_small = pygame.font.SysFont(None, 22)
-    label_surface = font_small.render("20", True, (0, 0, 0))
-    space = 6  # gap spacing
-    label_x = can_x + (can_size - coin_size) // 2 - label_surface.get_width() + 8
-    label_y = coin_y + (coin_size - label_surface.get_height()) // 2
-    screen.blit(label_surface, (label_x, label_y))
-    coin_x = label_x + label_surface.get_width() + space
-        # Draw coin icon
-    # global declaration is at the top of this function
-    coin_img = None
-    if _IMG_COIN:
-        coin_img = pygame.transform.smoothscale(_IMG_COIN, (coin_size, coin_size))
-    elif _COIN_ICON:
-        coin_img = pygame.transform.smoothscale(_COIN_ICON, (coin_size, coin_size))
-    if coin_img:
+
+        # Determine coins required from settings if available; fallback to 20
+        coins_req = 20
+        try:
+            from settings import LEVELS
+            if isinstance(LEVELS, list) and LEVELS:
+                coins_req = int(LEVELS[0].get('coins_required', coins_req))
+        except Exception:
+            pass
+
+        # Label like: "20 [coin icon]" centered below the can
+        coin_size = int(_ICON_SIZE * 0.8)
+        coin_y = can_y + can_size + 4
+        font_small = pygame.font.SysFont(None, 22)
+        label_surface = font_small.render(str(coins_req), True, (0, 0, 0))
+        space = 6
+        total_w = label_surface.get_width() + space + max(coin_size, _ICON_SIZE)
+        label_x = can_x + (can_size - total_w) // 2
+        label_y = coin_y + (coin_size - label_surface.get_height()) // 2
+        screen.blit(label_surface, (label_x, label_y))
+
+        coin_x = label_x + label_surface.get_width() + space
+        if _COIN_IMG_SCALED is not None:
+            coin_img = pygame.transform.smoothscale(_COIN_IMG_SCALED, (coin_size, coin_size))
+        else:
+            coin_img = pygame.transform.smoothscale(_COIN_ICON, (coin_size, coin_size))
         screen.blit(coin_img, (coin_x, coin_y))
 
 
@@ -248,19 +267,21 @@ def draw_level_start_hint(screen, font, coins_required, reward_text, reward_imag
 
 
 def draw_background(screen, width, height):
-    """Draw background: prefer loaded image, otherwise procedural gradient + ground."""
-    global _IMG_BACKGROUND
+    """Draw background: prefer loaded image (cached scale), else gradient + ground."""
+    global _IMG_BACKGROUND, _BG_SCALED, _BG_SCALED_SIZE
     if _IMG_BACKGROUND is None:
-        # attempt to load status images (which also tries background)
         _load_status_images()
 
-    if _IMG_BACKGROUND:
+    if _IMG_BACKGROUND is not None:
         try:
-            bg = pygame.transform.smoothscale(_IMG_BACKGROUND, (width, height))
-            screen.blit(bg, (0, 0))
+            if _BG_SCALED is None or _BG_SCALED_SIZE != (width, height):
+                _BG_SCALED = pygame.transform.smoothscale(_IMG_BACKGROUND, (width, height))
+                _BG_SCALED_SIZE = (width, height)
+            screen.blit(_BG_SCALED, (0, 0))
             return
         except Exception:
-            pass
+            _BG_SCALED = None
+            _BG_SCALED_SIZE = None
 
     # fallback: procedural gradient
     # Colors
@@ -314,9 +335,12 @@ def draw_center_countdown(screen, font, seconds_left):
         x0 = WIDTH // 2 - total_w // 2
         y = 10
         # draw icon (also tint slightly when warning)
-        if _IMG_STOMACH:
+        if _STOMACH_IMG_SCALED is None and _IMG_STOMACH is None:
+            _load_status_images()
+            _ensure_scaled_icons(_ICON_SIZE)
+        if _STOMACH_IMG_SCALED:
             try:
-                icon_s = pygame.transform.smoothscale(_IMG_STOMACH, (icon_size, icon_size))
+                icon_s = pygame.transform.smoothscale(_STOMACH_IMG_SCALED, (icon_size, icon_size))
                 if is_warning:
                     # tint the icon by blending a red surface on top to emphasize
                     tint = pygame.Surface((icon_size, icon_size), pygame.SRCALPHA)
