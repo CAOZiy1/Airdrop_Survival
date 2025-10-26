@@ -14,9 +14,7 @@ This is a small Pygame demo about surviving airdrops in a post‑apocalyptic set
 🎥 Demo video: https://youtu.be/3dZ-QFR_xRI 
 
 ![Intro Animation](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/intro.png)
-![Drop Moment](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/drop.png)
-![Success Screen](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/success.png)
-![Failure Screen](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/failure.png)
+
 
 
 ## How to Run
@@ -58,9 +56,6 @@ python .\airdrop_survival\tools\generate_assets.py
 Input
 - Keyboard: Arrow Left/Right or A/D to move (supports long press)
 - Mouse: In the Intro scene, click “ENTER GAME” to start; on the result screen, click "Back to Menu" or "Quit"
-
-Reference screenshot:
-![Intro Animation](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/intro.png)
 
 Feedback
 - Visual: Top‑left HUD shows hearts (lives) and coins; top‑right shows goal/reward hints; +1 floaters appear on pickups; injury/death overlays; optional background image; a top message "XX seconds until starvation"
@@ -185,9 +180,6 @@ Have fun, and feel free to extend with more levels and mechanics!
 🎥 Demo video: https://youtu.be/3dZ-QFR_xRI 
 
 ![Intro Animation - 飞机进入](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/intro.png)
-![Drop Moment - 投放瞬间](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/drop.png)
-![Success Screen - 成功结局](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/success.png)
-![Failure Screen - 失败结局](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/failure.png)
 
 
 ## How to Run
@@ -231,9 +223,6 @@ python .\airdrop_survival\tools\generate_assets.py
 Input
 - 键盘: 左右方向键 或 A / D 控制玩家移动（支持长按）。
 - 鼠标: 在 Intro 场景点击 “ENTER GAME” 按钮以开始；结算界面可点击 "Back to Menu" 或 "Quit"。
-
-参考截图：
-![Intro Animation - 飞机进入](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/intro.png)
 
 Feedback
 - 视觉反馈: 左上角数值面板显示生命（心数）、金币，右上角目标奖励提示；拾取金币/医疗包显示 +1 浮动文字；受伤/死亡显示覆盖图；可选背景图；顶部显示“XX seconds until starvation” 倒计时条目。
