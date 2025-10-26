@@ -82,7 +82,7 @@ LEVELS = [
 		'time_seconds': 60,  # 60 seconds for first level
 		'coins_required': 20,
 		'reward': {
-			'type': 'food_can',
+			'type': 'food can',
 			'image': 'can.png'
 		}
 	}

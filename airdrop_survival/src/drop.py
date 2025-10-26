@@ -1,204 +1,241 @@
 # src/drop.py
 
-import pygame
-import random
-import os
-from settings import WIDTH, DROP_SIZE, DROP_TYPES, DROP_WEIGHTS, DROP_BASE_SPEED_MIN, DROP_BASE_SPEED_MAX, DROP_SPEED_INCREASE_PER_MIN, BOMB_SPEED_MULTIPLIER, DROP_TIME_SCALE_START, DROP_TIME_SCALE_RAMP_SEC, DROP_TIME_STAGE1_SEC, DROP_TIME_STAGE1_SCALE
-from settings import USE_PER_TYPE_SPEED_MULTIPLIERS, COIN_SPEED_MULTIPLIER, HEALTH_SPEED_MULTIPLIER
+from __future__ import annotations
 
-# Module-level image cache
-_IMG_BOMB = None
-_IMG_COIN = None
-_IMG_HEALTH = None
+import os
+import random
+from typing import Optional
+
+import pygame
+
+from settings import (
+    WIDTH,
+    DROP_SIZE,
+    DROP_TYPES,
+    DROP_WEIGHTS,
+    DROP_BASE_SPEED_MIN,
+    DROP_BASE_SPEED_MAX,
+    DROP_SPEED_INCREASE_PER_MIN,
+    BOMB_SPEED_MULTIPLIER,
+    DROP_TIME_SCALE_START,
+    DROP_TIME_SCALE_RAMP_SEC,
+    DROP_TIME_STAGE1_SEC,
+    DROP_TIME_STAGE1_SCALE,
+)
+from settings import (
+    USE_PER_TYPE_SPEED_MULTIPLIERS,
+    COIN_SPEED_MULTIPLIER,
+    HEALTH_SPEED_MULTIPLIER,
+)
+
+# Module-level image cache (originals)
+_IMG_BOMB: Optional[pygame.Surface] = None
+_IMG_COIN: Optional[pygame.Surface] = None
+_IMG_HEALTH: Optional[pygame.Surface] = None
+
+# Module-level scaled cache (resized to current DROP_SIZE)
+_SCALED_SIZE: Optional[int] = None
+_BOMB_SCALED: Optional[pygame.Surface] = None
+_COIN_SCALED: Optional[pygame.Surface] = None
+_HEALTH_SCALED: Optional[pygame.Surface] = None
 
 # Module-level sound cache (initialized by init_sounds)
-_COIN_SOUND = None
-_BOMB_SOUND = None
-_HEAL_SOUND = None
-_SUCCESS_SOUND = None
-_FAIL_SOUND = None
+_COIN_SOUND: Optional[pygame.mixer.Sound] = None
+_BOMB_SOUND: Optional[pygame.mixer.Sound] = None
+_HEAL_SOUND: Optional[pygame.mixer.Sound] = None
+_SUCCESS_SOUND: Optional[pygame.mixer.Sound] = None
+_FAIL_SOUND: Optional[pygame.mixer.Sound] = None
 
-def init_sounds():
-    """Initialize pygame mixer and load pickup/explosion sounds from assets/sounds/"""
-    global _COIN_SOUND, _BOMB_SOUND, _HEAL_SOUND
-    try:
-        if not pygame.mixer.get_init():
+def init_sounds() -> None:
+    """Initialize mixer (if needed) and load pickup/explosion sounds from assets/sounds."""
+    global _COIN_SOUND, _BOMB_SOUND, _HEAL_SOUND, _SUCCESS_SOUND, _FAIL_SOUND
+
+    if not pygame.mixer.get_init():
+        try:
             pygame.mixer.init()
-    except Exception:
-        pass
+        except Exception:
+            # If mixer fails to init, leave sounds as None.
+            return
+
     base = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sounds')
-    def _load(name, vol=0.8):
-        wav = os.path.join(base, name + '.wav')
-        mp3 = os.path.join(base, name + '.mp3')
-        for p in (wav, mp3):
+
+    # apply global volume/mute from settings
+    try:
+        from settings import SOUND_VOLUME, SOUND_MUTED
+        sound_volume = float(SOUND_VOLUME)
+        sound_muted = bool(SOUND_MUTED)
+    except Exception:
+        sound_volume = 1.0
+        sound_muted = False
+
+    def _vol(v: float) -> float:
+        return 0.0 if sound_muted else max(0.0, min(1.0, float(v) * sound_volume))
+
+    def _load(name: str, vol: float = 0.8) -> Optional[pygame.mixer.Sound]:
+        for ext in ('.wav', '.mp3'):
+            p = os.path.join(base, name + ext)
             if os.path.exists(p):
                 try:
                     s = pygame.mixer.Sound(p)
                     s.set_volume(vol)
-                    print(f"drop: loaded sound {p}")
                     return s
                 except Exception:
-                    print(f"drop: failed to load sound {p}")
+                    continue
         return None
-
-    # apply global volume/mute from settings if available
-    try:
-        from settings import SOUND_VOLUME, SOUND_MUTED
-    except Exception:
-        SOUND_VOLUME = 1.0
-        SOUND_MUTED = False
-
-    def _vol(v):
-        return 0.0 if SOUND_MUTED else max(0.0, min(1.0, float(v) * float(SOUND_VOLUME)))
 
     _COIN_SOUND = _load('coin_pickup', vol=_vol(0.7))
     _BOMB_SOUND = _load('bomb_explosion', vol=_vol(1.0))
     _HEAL_SOUND = _load('heal_pickup', vol=_vol(0.8))
-    # optional level sounds
+    # optional end-of-level stingers (short sfx; main ending music is handled in game.py)
     _SUCCESS_SOUND = _load('success', vol=_vol(0.9))
     _FAIL_SOUND = _load('failure', vol=_vol(0.9))
 
-def play_coin():
-    try:
-        if _COIN_SOUND:
+def play_coin() -> None:
+    if _COIN_SOUND:
+        try:
             _COIN_SOUND.play()
-    except Exception:
-        pass
+        except Exception:
+            pass
 
-def play_bomb():
-    try:
-        if _BOMB_SOUND:
+def play_bomb() -> None:
+    if _BOMB_SOUND:
+        try:
             _BOMB_SOUND.play()
-    except Exception:
-        pass
+        except Exception:
+            pass
 
-def play_heal():
-    try:
-        if _HEAL_SOUND:
+def play_heal() -> None:
+    if _HEAL_SOUND:
+        try:
             _HEAL_SOUND.play()
-    except Exception:
-        pass
+        except Exception:
+            pass
 
-def play_success():
-    try:
-        if _SUCCESS_SOUND:
+def play_success() -> None:
+    if _SUCCESS_SOUND:
+        try:
             _SUCCESS_SOUND.play()
-    except Exception:
-        pass
+        except Exception:
+            pass
 
 
-def play_failure():
-    try:
-        if _FAIL_SOUND:
+def play_failure() -> None:
+    if _FAIL_SOUND:
+        try:
             _FAIL_SOUND.play()
-    except Exception:
-        pass
+        except Exception:
+            pass
 
-def _load_images():
+def _load_images() -> None:
+    """Load original images into cache (no scaling)."""
     global _IMG_BOMB, _IMG_COIN, _IMG_HEALTH
-    base = os.path.join(os.path.dirname(__file__), '..', 'assets')
-    base = os.path.normpath(base)
-    try:
-        p = os.path.join(base, 'bomb.png')
-        print(f"drop: loading bomb image from {p}")
-        _IMG_BOMB = pygame.image.load(p).convert_alpha()
-    except Exception:
-        import traceback
-        print(f"drop: failed loading bomb image from {p}")
-        traceback.print_exc()
-        _IMG_BOMB = None
-    try:
-        p = os.path.join(base, 'coin.png')
-        print(f"drop: loading coin image from {p}")
-        _IMG_COIN = pygame.image.load(p).convert_alpha()
-    except Exception:
-        import traceback
-        print(f"drop: failed loading coin image from {p}")
-        traceback.print_exc()
-        _IMG_COIN = None
-    try:
-        p = os.path.join(base, 'health_pack.png')
-        print(f"drop: loading health image from {p}")
-        _IMG_HEALTH = pygame.image.load(p).convert_alpha()
-    except Exception:
-        import traceback
-        print(f"drop: failed loading health image from {p}")
-        traceback.print_exc()
-        _IMG_HEALTH = None
+    base = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'assets'))
+
+    def _load_img(filename: str) -> Optional[pygame.Surface]:
+        path = os.path.join(base, filename)
+        try:
+            return pygame.image.load(path).convert_alpha()
+        except Exception:
+            return None
+
+    _IMG_BOMB = _load_img('bomb.png')
+    _IMG_COIN = _load_img('coin.png')
+    _IMG_HEALTH = _load_img('health_pack.png')
+
+def _ensure_scaled() -> None:
+    """Ensure scaled surfaces match current DROP_SIZE (compute once)."""
+    global _SCALED_SIZE, _BOMB_SCALED, _COIN_SCALED, _HEALTH_SCALED
+    if _SCALED_SIZE == DROP_SIZE:
+        return
+    _SCALED_SIZE = DROP_SIZE
+
+    def _scale(img: Optional[pygame.Surface]) -> Optional[pygame.Surface]:
+        if not img:
+            return None
+        try:
+            return pygame.transform.smoothscale(img, (DROP_SIZE, DROP_SIZE))
+        except Exception:
+            return None
+
+    _BOMB_SCALED = _scale(_IMG_BOMB)
+    _COIN_SCALED = _scale(_IMG_COIN)
+    _HEALTH_SCALED = _scale(_IMG_HEALTH)
 
 
 class Drop:
-    def __init__(self, elapsed_seconds=0, level_speed_multiplier=1.0):
+    def __init__(self, elapsed_seconds: float = 0.0, level_speed_multiplier: float = 1.0) -> None:
+        # Lazy-load images and compute scaled surfaces
         if _IMG_BOMB is None and _IMG_COIN is None and _IMG_HEALTH is None:
             _load_images()
+        _ensure_scaled()
 
-        self.x = random.randint(0, WIDTH - DROP_SIZE)
-        self.y = 0
-        # base speed random in range, then increase with elapsed minutes
+        # Spawn across the width
+        self.x: float = float(random.randint(0, max(0, WIDTH - DROP_SIZE)))
+        self.y: float = 0.0
+
+        # Base speed with global increase over elapsed time (per minute)
         base = random.uniform(DROP_BASE_SPEED_MIN, DROP_BASE_SPEED_MAX)
         increase = (elapsed_seconds / 60.0) * DROP_SPEED_INCREASE_PER_MIN
-        # apply time-scaling: start slightly slower, ramp to 1.0 by DROP_TIME_SCALE_RAMP_SEC
-        time_scale = 1.0
-        try:
-            # piecewise: stage1 constant scale, then ramp from stage1_scale -> DROP_TIME_SCALE_START -> 1.0
-            if elapsed_seconds <= DROP_TIME_STAGE1_SEC:
-                time_scale = DROP_TIME_STAGE1_SCALE
-            else:
-                # after stage1, interpolate between DROP_TIME_SCALE_START and 1.0 over remaining ramp
-                if DROP_TIME_SCALE_RAMP_SEC > DROP_TIME_STAGE1_SEC:
-                    t_after = max(0.0, elapsed_seconds - DROP_TIME_STAGE1_SEC)
-                    ramp_duration = float(DROP_TIME_SCALE_RAMP_SEC - DROP_TIME_STAGE1_SEC)
-                    frac_t = min(1.0, t_after / ramp_duration) if ramp_duration > 0 else 1.0
-                    time_scale = DROP_TIME_SCALE_START + (1.0 - DROP_TIME_SCALE_START) * frac_t
-                else:
-                    time_scale = 1.0
-        except Exception:
-            time_scale = 1.0
-        self.speed = (base + increase) * time_scale
-        try:
-            # use weighted random choices if weights are provided
-            self.type = random.choices(DROP_TYPES, weights=DROP_WEIGHTS, k=1)[0]
-        except Exception:
-            self.type = random.choice(DROP_TYPES)
-        # apply configured multipliers: either per-type or a single global multiplier
-        try:
-            if USE_PER_TYPE_SPEED_MULTIPLIERS:
-                if self.type == 'coin':
-                    self.speed *= COIN_SPEED_MULTIPLIER
-                elif self.type == 'health_pack':
-                    self.speed *= HEALTH_SPEED_MULTIPLIER
-                else:
-                    self.speed *= BOMB_SPEED_MULTIPLIER
-            else:
-                # legacy: apply single bomb multiplier to all
-                self.speed *= BOMB_SPEED_MULTIPLIER
-        except Exception:
-            pass
-        # apply per-level multiplier last so it scales the final speed
-        try:
-            self.speed *= float(level_speed_multiplier)
-        except Exception:
-            pass
-        self.rect = pygame.Rect(self.x, self.y, DROP_SIZE, DROP_SIZE)
 
-    def update(self):
+        # Time scaling: stage 1 fixed scale, then ramp to 1.0 by DROP_TIME_SCALE_RAMP_SEC
+        if elapsed_seconds <= DROP_TIME_STAGE1_SEC:
+            time_scale = DROP_TIME_STAGE1_SCALE
+        else:
+            if DROP_TIME_SCALE_RAMP_SEC > DROP_TIME_STAGE1_SEC:
+                t_after = max(0.0, elapsed_seconds - DROP_TIME_STAGE1_SEC)
+                ramp_duration = float(DROP_TIME_SCALE_RAMP_SEC - DROP_TIME_STAGE1_SEC)
+                frac_t = min(1.0, t_after / ramp_duration) if ramp_duration > 0 else 1.0
+                time_scale = DROP_TIME_SCALE_START + (1.0 - DROP_TIME_SCALE_START) * frac_t
+            else:
+                time_scale = 1.0
+
+        speed = (base + increase) * time_scale
+
+        # Weighted type selection (fallback to uniform if weights invalid)
+        try:
+            drop_type = random.choices(DROP_TYPES, weights=DROP_WEIGHTS, k=1)[0]
+        except Exception:
+            drop_type = random.choice(DROP_TYPES)
+
+        # Per-type speed multipliers (or legacy single multiplier)
+        if USE_PER_TYPE_SPEED_MULTIPLIERS:
+            if drop_type == 'coin':
+                speed *= COIN_SPEED_MULTIPLIER
+            elif drop_type == 'health_pack':
+                speed *= HEALTH_SPEED_MULTIPLIER
+            else:
+                speed *= BOMB_SPEED_MULTIPLIER
+        else:
+            speed *= BOMB_SPEED_MULTIPLIER
+
+        # Per-level multiplier last
+        try:
+            speed *= float(level_speed_multiplier)
+        except Exception:
+            pass
+
+        self.speed: float = float(speed)
+        self.type: str = drop_type
+        self.rect = pygame.Rect(int(self.x), int(self.y), DROP_SIZE, DROP_SIZE)
+
+    def update(self) -> None:
         self.y += self.speed
-        self.rect.y = self.y
+        self.rect.y = int(self.y)
 
-    def draw(self, screen):
-        # Choose image based on type and blit scaled to DROP_SIZE
-        img = None
-        if self.type == "bomb":
-            img = _IMG_BOMB
-        elif self.type == "coin":
-            img = _IMG_COIN
+    def draw(self, screen: pygame.Surface) -> None:
+        # Choose cached, pre-scaled surface
+        if self.type == 'bomb':
+            surf = _BOMB_SCALED
+            color = (200, 0, 0)
+        elif self.type == 'coin':
+            surf = _COIN_SCALED
+            color = (212, 175, 55)
         else:
-            img = _IMG_HEALTH
+            surf = _HEALTH_SCALED
+            color = (0, 200, 0)
 
-        if img:
-            surf = pygame.transform.smoothscale(img, (DROP_SIZE, DROP_SIZE))
-            screen.blit(surf, (self.x, self.y))
+        if surf:
+            screen.blit(surf, (int(self.x), int(self.y)))
         else:
-            # Fallback: draw a simple circle if image missing
-            color = (200, 0, 0) if self.type == "bomb" else (212, 175, 55) if self.type == "coin" else (0, 200, 0)
+            # Fallback: simple circle if image missing
             pygame.draw.circle(screen, color, self.rect.center, DROP_SIZE // 2)
