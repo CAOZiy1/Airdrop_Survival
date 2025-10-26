@@ -1,7 +1,11 @@
+<a id="top" name="top"></a>
+<p align="right">Language / 语言: <a href="#en">English</a> | <a href="#zh">中文</a></p>
+
+<a id="en" name="en"></a>
 # Airdrop Survival — English README
+<p align="right"><a href="#top">↥ Back to top</a></p>
 
 ## Introduction
-
 This is a small Pygame demo about surviving airdrops in a post‑apocalyptic setting. A high‑altitude plane continuously drops bombs, coins, and health packs. You must move left/right to dodge bombs, collect coins/health, and survive until the level timer runs out while meeting the target coin goal to obtain food and avoid starvation. The repository contains a complete runnable project with sound effects and example assets. Audio/BGM are optional: if missing, the game runs silently.
 
 
@@ -9,10 +13,10 @@ This is a small Pygame demo about surviving airdrops in a post‑apocalyptic set
 
 🎥 Demo video: https://youtu.be/3dZ-QFR_xRI 
 
-![Intro Animation](assets/screenshots/intro.png)
-![Drop Moment](assets/screenshots/drop.png)
-![Success Screen](assets/screenshots/success.png)
-![Failure Screen](assets/screenshots/failure.png)
+![Intro Animation](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/intro.png)
+![Drop Moment](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/drop.png)
+![Success Screen](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/success.png)
+![Failure Screen](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/failure.png)
 
 
 ## How to Run
@@ -40,7 +44,7 @@ python .\airdrop_survival\src\main.py
 ```
 
 Example entry file:
-![How to Run - main.py](assets/screenshots/main.png)
+![How to Run - main.py](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/main.png)
 
 Optional assets
 - If you’re missing basic PNGs, you can quickly create placeholders:
@@ -56,7 +60,7 @@ Input
 - Mouse: In the Intro scene, click “ENTER GAME” to start; on the result screen, click "Back to Menu" or "Quit"
 
 Reference screenshot:
-![Intro Animation](assets/screenshots/intro.png)
+![Intro Animation](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/intro.png)
 
 Feedback
 - Visual: Top‑left HUD shows hearts (lives) and coins; top‑right shows goal/reward hints; +1 floaters appear on pickups; injury/death overlays; optional background image; a top message "XX seconds until starvation"
@@ -64,9 +68,9 @@ Feedback
 - Rules: After 60 seconds, win/lose is decided by coin count; success plays success.wav, failure plays failure.wav and shows the result screen. Dying within 60 seconds also plays failure.wav
 
 More shots:
-![Drop Moment](assets/screenshots/drop.png)
-![Success Screen](assets/screenshots/success.png)
-![Failure Screen](assets/screenshots/failure.png)
+![Drop Moment](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/drop.png)
+![Success Screen](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/success.png)
+![Failure Screen](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/failure.png)
 
 
 ## Project Structure
@@ -167,7 +171,9 @@ Have fun, and feel free to extend with more levels and mechanics!
 
 ---
 
+<a id="zh" name="zh"></a>
 # Airdrop Survival Intro Module（中文 README）
+<p align="right"><a href="#top">↥ 返回顶部</a></p>
 
 ## Introduction
 
@@ -178,10 +184,10 @@ Have fun, and feel free to extend with more levels and mechanics!
 
 🎥 Demo video: https://youtu.be/3dZ-QFR_xRI 
 
-![Intro Animation - 飞机进入](assets/screenshots/intro.png)
-![Drop Moment - 投放瞬间](assets/screenshots/drop.png)
-![Success Screen - 成功结局](assets/screenshots/success.png)
-![Failure Screen - 失败结局](assets/screenshots/failure.png)
+![Intro Animation - 飞机进入](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/intro.png)
+![Drop Moment - 投放瞬间](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/drop.png)
+![Success Screen - 成功结局](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/success.png)
+![Failure Screen - 失败结局](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/failure.png)
 
 
 ## How to Run
@@ -210,7 +216,7 @@ python .\airdrop_survival\src\main.py
 
 ```
 如何运行主程序（示例）：
-![How to Run - 主程序文件](assets/screenshots/main.png)
+![How to Run - 主程序文件](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/main.png)
 
 
 可选安装与素材
@@ -227,7 +233,7 @@ Input
 - 鼠标: 在 Intro 场景点击 “ENTER GAME” 按钮以开始；结算界面可点击 "Back to Menu" 或 "Quit"。
 
 参考截图：
-![Intro Animation - 飞机进入](assets/screenshots/intro.png)
+![Intro Animation - 飞机进入](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/intro.png)
 
 Feedback
 - 视觉反馈: 左上角数值面板显示生命（心数）、金币，右上角目标奖励提示；拾取金币/医疗包显示 +1 浮动文字；受伤/死亡显示覆盖图；可选背景图；顶部显示“XX seconds until starvation” 倒计时条目。
@@ -235,9 +241,9 @@ Feedback
 - 规则反馈: 60 秒后按金币数评判胜负；胜利播放 success.wav，失败播放 failure.wav 并显示结算界面。60 秒内死亡，也会播放 failure.wav
 
 参考截图：
-![Drop Moment - 投放瞬间](assets/screenshots/drop.png)
-![Success Screen - 成功结局](assets/screenshots/success.png)
-![Failure Screen - 失败结局](assets/screenshots/failure.png)
+![Drop Moment - 投放瞬间](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/drop.png)
+![Success Screen - 成功结局](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/success.png)
+![Failure Screen - 失败结局](https://raw.githubusercontent.com/CAOZiy1/Airdrop_Survival/main/airdrop_survival/assets/screenshots/failure.png)
 
 
 ## Project Structure
