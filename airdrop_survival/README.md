@@ -66,7 +66,7 @@ airdrop_survival/
 ├── README.md
 ├── requirements.txt
 ├── assets/
-│   ├── sounds/                # BGM 与音效（可选，缺失则静默）
+│   ├── sounds/                # BGM 与音效（部分由pygame生成，部分源于Pixabay和Chosic）
 │   ├── screenshots/           # 截图（可自行创建，辅助instruction）
 │   └── visual_materials.png   # 所有的美术素材，均由AI生成
 ├── src/
@@ -82,7 +82,8 @@ airdrop_survival/
 └── tools/
     ├── check_wav.py           # 检查 success.wav/failure.wav 等是否可被 Pygame 播放
     ├── generate_assets.py     # 生成炸弹/硬币/医疗包占位图（PNG）
-    └── make_transparent.py    # 将近白背景变透明的小工具
+    ├── make_transparent.py    # 将近白背景变透明的小工具
+    └── test_grayscale.py      # 
 ```
 
 重要文件说明
