@@ -1,50 +1,43 @@
 # src/game.py
 
-import pygame
+import os
 import random
-from settings import WIDTH, HEIGHT, PLAYER_HEIGHT
+import pygame
+
+from settings import (
+    WIDTH,
+    HEIGHT,
+    PLAYER_HEIGHT,
+    LEVELS,
+    CAN_IMAGE,
+    DROP_SPAWN_INTERVAL_BASE,
+    DROP_SPAWN_INTERVAL_MIN,
+    DROP_SPAWN_DECREASE_PER_MIN,
+    LEVEL_SPEED_INCREASE_PER_LEVEL,
+    SOUND_VOLUME,
+    SOUND_MUTED,
+)
 from player import Player
-from drop import Drop
-from ui import draw_status, draw_gameover
-from settings import LEVELS, CAN_IMAGE
+from drop import Drop, play_bomb, play_coin, play_heal, init_sounds
+from ui import (
+    draw_status,
+    draw_gameover,  # fallback only
+    draw_level_result,
+    draw_background,
+    draw_center_countdown,
+)
 
 
 class Game:
     def __init__(self):
         pygame.init()
-        # initialize sounds for drops and pickups (safe to call even if mixer already init)
+        # Sounds (safe to call even if mixer already initialized)
         try:
-            import drop as drop_module
-            drop_module.init_sounds()
+            init_sounds()
         except Exception:
             pass
-        # Try to start background music if available (prefer user bgm.mp3/bgm.wav)
-        try:
-            if not pygame.mixer.get_init():
-                pygame.mixer.init()
-            import os
-            sounds_base = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sounds')
-            # Prefer user-provided bgm files; do not synthesize fallbacks
-            bgm_path = None
-            for candidate in ('bgm.mp3', 'bgm.wav'):
-                p = os.path.join(sounds_base, candidate)
-                if os.path.exists(p):
-                    bgm_path = p
-                    break
-            if bgm_path:
-                try:
-                    pygame.mixer.music.load(bgm_path)
-                    try:
-                        from settings import SOUND_VOLUME, SOUND_MUTED
-                        vol = 0.6 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
-                    except Exception:
-                        vol = 0.6
-                    pygame.mixer.music.set_volume(vol)
-                    pygame.mixer.music.play(loops=-1)
-                except Exception:
-                    pass
-        except Exception:
-            pass
+        # Background music (optional, user-provided bgm.mp3/bgm.wav)
+        self._start_bgm()
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("Airdrop Survival")
         self.clock = pygame.time.Clock()
@@ -61,8 +54,8 @@ class Game:
         self.level_index = 0
         self.level = LEVELS[self.level_index] if LEVELS else None
         self.level_end_time = self.start_ticks + (self.level['time_seconds'] * 1000) if self.level else None
-        self.level_active = True if self.level else False
-    # Skip level-start banner; jump directly into gameplay
+        self.level_active = bool(self.level)
+        # visual feedback: floating pop texts as list of tuples
         # visual feedback: floating pop texts as list of tuples
         # tuple formats supported for backward compatibility:
         #  (x, start_y, start_ms)                   -> text '+1', yellow
@@ -83,101 +76,87 @@ class Game:
         # avoid quitting pygame in this instance's teardown.
         self._handoff_to_new_session = False
 
-    def _play_ending_music(self, filename, loop=False):
-        """Try to fade current music and play an ending music file from assets/sounds."""
+    def _start_bgm(self) -> None:
+        """Start looping background music if assets/sounds/bgm.* exists."""
         try:
-            # ensure mixer initialized
-            try:
-                if not pygame.mixer.get_init():
-                    pygame.mixer.init()
-            except Exception:
-                pass
-            import os
-            base = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sounds')
-            p = os.path.join(base, filename)
-
-            if os.path.exists(p):
-                try:
-                    # try a short fadeout of any current music
-                    try:
-                        pygame.mixer.music.fadeout(400)
-                    except Exception:
-                        pass
-                    # ensure music is stopped so the ending track won't be masked
-                    try:
-                        pygame.mixer.music.stop()
-                    except Exception:
-                        pass
-                    # do not stop all mixer channels here; only stop music to avoid masking
-                except Exception:
-                    try:
-                        # ensure music is stopped if fadeout is unavailable
-                        pygame.mixer.music.stop()
-                    except Exception:
-                        pass
-                # desired volume
-                try:
-                    from settings import SOUND_VOLUME, SOUND_MUTED
-                    vol = 1.0 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
-                except Exception:
-                    vol = 1.0
-                # First try streaming music API; if it fails (e.g., unknown WAVE format),
-                # fall back to Sound playback which supports more codecs in some builds.
-                played = False
-                try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+        except Exception:
+            return
+        try:
+            sounds_base = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sounds')
+            for name in ('bgm.mp3', 'bgm.wav'):
+                p = os.path.join(sounds_base, name)
+                if os.path.exists(p):
                     pygame.mixer.music.load(p)
+                    vol = 0.6 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
                     try:
                         pygame.mixer.music.set_volume(vol)
                     except Exception:
                         pass
-                    pygame.mixer.music.play(loops=-1 if loop else 0)
-                    played = True
                     try:
-                        print(f"[ending-music] music.play {filename} (loop={loop})")
+                        pygame.mixer.music.play(loops=-1)
                     except Exception:
                         pass
-                except Exception as e:
-                    try:
-                        print(f"[ending-music] music.load failed, falling back to Sound: {e}")
-                    except Exception:
-                        pass
-                if not played:
-                    try:
-                        # Stop any prior ending Sound
-                        if getattr(self, '_ending_sound', None) is not None:
-                            try:
-                                self._ending_sound.stop()
-                            except Exception:
-                                pass
-                        snd = pygame.mixer.Sound(p)
-                        try:
-                            snd.set_volume(vol)
-                        except Exception:
-                            pass
-                        snd.play(loops=-1 if loop else 0)
-                        self._ending_sound = snd
-                        try:
-                            print(f"[ending-music] sound.play {filename} (loop={loop})")
-                        except Exception:
-                            pass
-                    except Exception as e2:
-                        try:
-                            print(f"[ending-music] sound fallback failed: {e2}")
-                        except Exception:
-                            pass
-            else:
+                    break
+        except Exception:
+            pass
+
+    def _play_ending_music(self, filename: str, loop: bool = False) -> None:
+        """Fade any current music and play assets/sounds/<filename> if present.
+
+        Tries pygame.mixer.music; if load/play fails, falls back to Sound.
+        """
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+        except Exception:
+            return
+
+        path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sounds', filename)
+        if not os.path.exists(path):
+            return
+        # fade/stop current music
+        try:
+            pygame.mixer.music.fadeout(400)
+        except Exception:
+            try:
+                pygame.mixer.music.stop()
+            except Exception:
+                pass
+
+        vol = 1.0 * (0.0 if SOUND_MUTED else float(SOUND_VOLUME))
+        # music first
+        try:
+            pygame.mixer.music.load(path)
+            try:
+                pygame.mixer.music.set_volume(vol)
+            except Exception:
+                pass
+            pygame.mixer.music.play(loops=-1 if loop else 0)
+            return
+        except Exception:
+            pass
+        # fallback to Sound
+        try:
+            if self._ending_sound is not None:
                 try:
-                    print(f"[ending-music] file not found: {p}")
+                    self._ending_sound.stop()
                 except Exception:
                     pass
+            snd = pygame.mixer.Sound(path)
+            try:
+                snd.set_volume(vol)
+            except Exception:
+                pass
+            snd.play(loops=-1 if loop else 0)
+            self._ending_sound = snd
         except Exception:
             pass
 
     def run(self):
         while self.running:
             self.clock.tick(60)
-            # draw procedural background (sky gradient + ground)
-            from ui import draw_background
             draw_background(self.screen, WIDTH, HEIGHT)
             self.handle_events()
             self.update()
@@ -185,18 +164,8 @@ class Game:
             # skip the regular draw/flip so we don't render a normal player frame.
             if not self.running:
                 break
-            try:
-                self.draw()
-                pygame.display.flip()
-            except pygame.error as e:
-                # If the display surface was quit (window closed) we should exit cleanly.
-                msg = str(e).lower()
-                if 'display surface quit' in msg or 'video system not initialized' in msg:
-                    self.running = False
-                    break
-                else:
-                    # re-raise unexpected pygame errors
-                    raise
+            self.draw()
+            pygame.display.flip()
         # fade out music if playing, then quit (unless handing off to a new session)
         if not getattr(self, '_handoff_to_new_session', False):
             try:
@@ -207,6 +176,12 @@ class Game:
                         pygame.mixer.music.stop()
                     except Exception:
                         pass
+                # also stop any ending sound fallback
+                if getattr(self, '_ending_sound', None) is not None:
+                    try:
+                        self._ending_sound.stop()
+                    except Exception:
+                        pass
             except Exception:
                 pass
             pygame.quit()
@@ -215,32 +190,19 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-            # keydown for buying food
-            elif event.type == pygame.KEYDOWN:
-                # debug: print A/D keydowns to verify input
-                try:
-                    if event.key in (pygame.K_a, pygame.K_d):
-                        print(f"keydown: {event.key}, name: {pygame.key.name(event.key)}")
-                except Exception:
-                    pass
+            # (no extra per-key handling needed here)
 
     def update(self):
         keys = pygame.key.get_pressed()
         self.player.move(keys)
 
-        # dynamic spawn interval: decreases over time to increase spawn frequency
+        # dynamic spawn interval: decreases over time (higher difficulty)
         elapsed_seconds = (pygame.time.get_ticks() - self.start_ticks) / 1000.0
-        from settings import DROP_SPAWN_INTERVAL_BASE, DROP_SPAWN_INTERVAL_MIN, DROP_SPAWN_DECREASE_PER_MIN
-        # compute current interval
         decrease = (elapsed_seconds / 60.0) * DROP_SPAWN_DECREASE_PER_MIN
         interval = max(DROP_SPAWN_INTERVAL_MIN, int(DROP_SPAWN_INTERVAL_BASE - decrease))
         if random.randint(1, interval) == 1:
-            # compute per-level speed multiplier (level 0 -> 1.0)
-            try:
-                from settings import LEVEL_SPEED_INCREASE_PER_LEVEL
-                level_mult = 1.0 + (self.level_index * LEVEL_SPEED_INCREASE_PER_LEVEL) if hasattr(self, 'level_index') else 1.0
-            except Exception:
-                level_mult = 1.0
+            # per-level speed multiplier (level 0 -> 1.0)
+            level_mult = 1.0 + (self.level_index * LEVEL_SPEED_INCREASE_PER_LEVEL) if hasattr(self, 'level_index') else 1.0
             self.drops.append(Drop(elapsed_seconds=elapsed_seconds, level_speed_multiplier=level_mult))
 
         for drop in self.drops[:]:
@@ -248,10 +210,9 @@ class Game:
             if drop.rect.colliderect(self.player.rect):
                 if drop.type == "bomb":
                     self.hearts -= 1
-                    # play bomb explosion sound
+                    # bomb explosion sound
                     try:
-                        import drop as drop_module
-                        drop_module.play_bomb()
+                        play_bomb()
                     except Exception:
                         pass
                     # show hurt overlay for ~2 seconds
@@ -263,20 +224,18 @@ class Game:
                         pass
                 elif drop.type == "coin":
                     self.coins += 1
-                    # play coin pickup sound
+                    # coin pickup sound
                     try:
-                        import drop as drop_module
-                        drop_module.play_coin()
+                        play_coin()
                     except Exception:
                         pass
                     # add coin pop at player's position
                     self.coin_pops.append((self.player.rect.centerx, self.player.rect.top, pygame.time.get_ticks(), "+1"))
                 elif drop.type == "health_pack" and self.hearts < 3:
                     self.hearts += 1
-                    # play heal pickup sound
+                    # heal pickup sound
                     try:
-                        import drop as drop_module
-                        drop_module.play_heal()
+                        play_heal()
                     except Exception:
                         pass
                     # floating green +1 feedback for heal
@@ -288,24 +247,21 @@ class Game:
             elif drop.y > HEIGHT:
                 self.drops.remove(drop)
 
-        # prune expired coin pops (duration ms)
+    # prune expired coin pops (duration ms)
         now = pygame.time.get_ticks()
         COIN_POP_DURATION = 800
         # coin_pops now contain tuples (x, start_y, t0, text)
         self.coin_pops = [p for p in self.coin_pops if now - p[2] < COIN_POP_DURATION]
 
-        # ...hunger system removed...
 
         # Level timer check: if level active and time reached, evaluate outcome
         if self.level_active and self.level_end_time is not None and now >= self.level_end_time:
             # determine success if coins >= required
             coins_required = self.level.get('coins_required', 0)
             reward = self.level.get('reward', {})
-            from ui import draw_level_result
             # try to load reward image from assets
             reward_img = None
             try:
-                import os
                 base = os.path.join(os.path.dirname(__file__), '..', 'assets')
                 p = os.path.join(base, reward.get('image', CAN_IMAGE))
                 if os.path.exists(p):
@@ -323,11 +279,8 @@ class Game:
                 except Exception:
                     pass
                 # show success UI with can image (humanize reward type for display)
-                try:
-                    _rtype = reward.get('type', 'can')
-                    _rtype_disp = str(_rtype).replace('_', ' ').strip()
-                except Exception:
-                    _rtype_disp = 'can'
+                _rtype = reward.get('type', 'can')
+                _rtype_disp = str(_rtype).replace('_', ' ').strip()
                 draw_level_result(self.screen, self.font, f"Congratulations! You got a {_rtype_disp}", success=True, reward_image=reward_img)
                 # single-level flow: finish and show back-to-menu overlay (no message)
                 self._show_back_to_menu("", (0, 220, 0))
@@ -372,7 +325,6 @@ class Game:
                         return
 
                 # draw frame with halo
-                from ui import draw_background
                 draw_background(self.screen, WIDTH, HEIGHT)
                 # draw drops and status then player so halo can be drawn on top
                 for drop in self.drops:
@@ -471,7 +423,6 @@ class Game:
         # show centered countdown message about starvation
         if time_left is not None:
             try:
-                from ui import draw_center_countdown
                 draw_center_countdown(self.screen, self.font, time_left)
             except Exception:
                 pass
@@ -602,7 +553,6 @@ class Game:
                             waiting = False
                             break
 
-                from ui import draw_background
                 draw_background(self.screen, WIDTH, HEIGHT)
                 self.screen.blit(overlay, (0, 0))
                 self.screen.blit(text_surf, (WIDTH // 2 - text_surf.get_width() // 2, HEIGHT // 2 - 80))

@@ -16,17 +16,12 @@ from settings import (
     DROP_BASE_SPEED_MIN,
     DROP_BASE_SPEED_MAX,
     DROP_SPEED_INCREASE_PER_MIN,
-    BOMB_SPEED_MULTIPLIER,
     DROP_TIME_SCALE_START,
     DROP_TIME_SCALE_RAMP_SEC,
     DROP_TIME_STAGE1_SEC,
     DROP_TIME_STAGE1_SCALE,
 )
-from settings import (
-    USE_PER_TYPE_SPEED_MULTIPLIERS,
-    COIN_SPEED_MULTIPLIER,
-    HEALTH_SPEED_MULTIPLIER,
-)
+from settings import PER_TYPE_SPEED_MULTIPLIER
 
 # Module-level image cache (originals)
 _IMG_BOMB: Optional[pygame.Surface] = None
@@ -197,16 +192,11 @@ class Drop:
         except Exception:
             drop_type = random.choice(DROP_TYPES)
 
-        # Per-type speed multipliers (or legacy single multiplier)
-        if USE_PER_TYPE_SPEED_MULTIPLIERS:
-            if drop_type == 'coin':
-                speed *= COIN_SPEED_MULTIPLIER
-            elif drop_type == 'health_pack':
-                speed *= HEALTH_SPEED_MULTIPLIER
-            else:
-                speed *= BOMB_SPEED_MULTIPLIER
-        else:
-            speed *= BOMB_SPEED_MULTIPLIER
+        # Per-type speed multiplier (defaults to 1.0 if type not found)
+        try:
+            speed *= float(PER_TYPE_SPEED_MULTIPLIER.get(drop_type, 1.0))
+        except Exception:
+            pass
 
         # Per-level multiplier last
         try:
