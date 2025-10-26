@@ -1,16 +1,17 @@
 # Airdrop Survival Intro Module
 
-这是一个末日背景的“空投生存”小游戏demo。高空的飞机会不断投掷炸弹、金币和回血包；你需要左右移动去躲避炸弹、收集金币/回血包，并在关卡倒计时结束前达到目标。该仓库包含完整可运行的 Pygame 项目、音效与示例资产（音效与 BGM 可选，缺失时游戏会静默运行）。
+这是一个末日背景的“空投生存”游戏demo。高空的飞机会不断投掷炸弹、金币和回血包；你需要左右移动去躲避炸弹、收集金币/回血包，并在关卡倒计时结束前存活并达到目标金币数，以换取食物避免饿死。该仓库包含完整可运行的 Pygame 项目、音效与示例资产（音效与 BGM 可选，缺失时游戏会静默运行）。
 
 
 ## How to Run
 
 前置要求
 - Python 3.9 或更高（推荐 3.10+）
-- 依赖：`pygame>=2.6.0`、`numpy`（用于死亡灰度特效，已在 requirements.txt 中列出）
+- 依赖：`pygame>=2.6.0`、`numpy`
 
 快速运行（Windows / PowerShell）
 ```powershell
+
 # 克隆仓库并进入目录
 git clone https://github.com/CAOZiy1/Airdrop_Survival.git
 cd Airdrop_Survival
@@ -23,9 +24,13 @@ python -m venv .venv
 python -m pip install -U pip
 pip install -r requirements.txt
 
-# 运行主程序（先播 Intro，再进入 Game）
+# 运行主程序（会先播 Intro 动画，再进入 Game）
 python .\airdrop_survival\src\main.py
+
 ```
+如何运行主程序（示例）：
+![How to Run - 主程序文件](assets/screenshots/main.png)
+
 
 可选安装与素材
 - 若缺少基本 PNG 素材，可生成占位图以快速体验：
@@ -33,20 +38,26 @@ python .\airdrop_survival\src\main.py
 python .\airdrop_survival\tools\generate_assets.py
 ```
 
----
 
 ## Input and Feedback
 
 Input
 - 键盘: 左右方向键 或 A / D 控制玩家移动（支持长按）。
-- 鼠标: 在 Intro 场景点击 “ENTER GAME” 按钮以开始；结算界面可点击 Back to Menu 或 Quit。
+- 鼠标: 在 Intro 场景点击 “ENTER GAME” 按钮以开始；结算界面可点击 "Back to Menu" 或 "Quit"。
+
+参考截图：
+![Intro Animation - 飞机进入](assets/screenshots/intro.png)
 
 Feedback
-- 视觉反馈: HUD 显示生命（心数）、金币与右上角目标奖励提示；拾取金币/医疗包显示 +1 浮动文字；受伤/死亡显示覆盖图；可选背景图；顶部显示“XX seconds until starvation” 倒计时条目。
+- 视觉反馈: 左上角数值面板显示生命（心数）、金币，右上角目标奖励提示；拾取金币/医疗包显示 +1 浮动文字；受伤/死亡显示覆盖图；可选背景图；顶部显示“XX seconds until starvation” 倒计时条目。
 - 听觉反馈: 背景 BGM 优先加载 `assets/sounds/bgm.mp3`，无则尝试 `bgm.wav`；拾取/爆炸/治疗/结局尝试播放对应音效（缺失时静默）。
-- 规则反馈: 60 秒后按金币数评判胜负；胜利播放 success.wav，失败播放 failure.wav 并显示结算界面。
+- 规则反馈: 60 秒后按金币数评判胜负；胜利播放 success.wav，失败播放 failure.wav 并显示结算界面。60 秒内死亡，也会播放 failure.wav
 
----
+参考截图：
+![Drop Moment - 投放瞬间](assets/screenshots/drop.png)
+![Success Screen - 成功结局](assets/screenshots/success.png)
+![Failure Screen - 失败结局](assets/screenshots/failure.png)
+
 
 ## Project Structure
 
@@ -56,7 +67,8 @@ airdrop_survival/
 ├── requirements.txt
 ├── assets/
 │   ├── sounds/                # BGM 与音效（可选，缺失则静默）
-│   └── screenshots/           # 截图占位（可自行创建）
+│   ├── screenshots/           # 截图（可自行创建，辅助instruction）
+│   └── visual_materials.png   # 所有的美术素材，均由AI生成
 ├── src/
 │   ├── main.py                # 入口：播放 Intro（若需要）然后启动 Game
 │   ├── game.py                # 主循环、碰撞、计时、结局与结局音乐控制
@@ -100,34 +112,16 @@ airdrop_survival/
 - 状态管理与交互逻辑: hearts（生命）、coins（金币）、timer（倒计时）驱动成功/失败分支。
 - 创意与审美整合: 通过倒计时、加速掉落与声效设计，营造紧张的生存体验。
 
----
 
-## Demo Assets and Screenshots (占位与指示)
-
-请在仓库中添加以下截图与可选视频链接以便评分者快速预览。把截图放到 `assets/screenshots/` 目录，并确保文件名与下方占位一致。
-
-- assets/screenshots/intro.png  — Intro 飞机进入画面  
-- assets/screenshots/drop.png   — 投放物资瞬间（炸弹/金币/回血包）  
-- assets/screenshots/success.png — 成功结局画面  
-- assets/screenshots/failure.png — 失败结局画面
-
-将下面 Markdown 区块直接保留到 README（或已经存在则替换占位），在你添加实际截图后图片会显示：
-
-```markdown
 ## Demo
 
-![Intro - 飞机进入](assets/screenshots/intro.png)   <!-- ADD: intro screenshot -->
-![Drop Moment - 投放瞬间](assets/screenshots/drop.png)   <!-- ADD: drop moment screenshot -->
-![Success Screen - 成功结局](assets/screenshots/success.png)   <!-- ADD: success screenshot -->
-![Failure Screen - 失败结局](assets/screenshots/failure.png)   <!-- ADD: failure screenshot -->
+![Intro Animation - 飞机进入](assets/screenshots/intro.png)
+![Drop Moment - 投放瞬间](assets/screenshots/drop.png)
+![Success Screen - 成功结局](assets/screenshots/success.png)
+![Failure Screen - 失败结局](assets/screenshots/failure.png)
 
-🎥 Demo video: https://youtu.be/your-demo-link  <!-- OPTIONAL: replace with your demo video -->
-```
+🎥 Demo video: https://youtu.be/your-demo-link  <!-- 可选：替换为你的演示视频链接 -->
 
-占位说明（便于后续替换）：
-- 把每张截图命名并放入 `assets/screenshots/`，同 README 中的路径一致。  
-- 如果没有视频，可暂时移除视频行或用 `TBD` 占位。  
-- 推荐每张截图尺寸不超过 1600px 宽并压缩为 PNG 或 JPG。
 
 ---
 
@@ -137,7 +131,7 @@ airdrop_survival/
 
 提交前检查项：
 - [ ] README 明确列出输入、反馈与实现映射  
-- [ ] requirements.txt 包含主要依赖并标注可选项（numpy）  
+- [ ] requirements.txt 包含主要依赖（含 numpy）  
 - [ ] assets/sounds 包含 `success.wav` 与 `failure.wav` 或在 README 中说明占位  
 - [ ] 在 README 中放置至少 3 张关键截图（Intro / 投放 / 结局）或提供视频链接  
 - [ ] 仓库为 Public，并将链接提交到课程平台（可在截止前继续更新）
@@ -151,7 +145,7 @@ airdrop_survival/
 - `src/settings.py` 提供了大量可调参数（掉落速度、权重、音量、Intro 重播等），可根据演示需要快速调优。
 
 ---
-
+## In The End
 祝你玩得开心，也欢迎继续扩展更多关卡与玩法！
 
 
