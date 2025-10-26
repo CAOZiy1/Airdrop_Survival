@@ -18,24 +18,19 @@ class Game:
             drop_module.init_sounds()
         except Exception:
             pass
-        # Try to start background music if available (prefer user bgm.mp3, else urgent_bgm.wav)
+        # Try to start background music if available (prefer user bgm.mp3/bgm.wav)
         try:
             if not pygame.mixer.get_init():
                 pygame.mixer.init()
             import os
             sounds_base = os.path.join(os.path.dirname(__file__), '..', 'assets', 'sounds')
-            # Prefer a user-provided bgm.mp3 if present
-            preferred_bgm = os.path.join(sounds_base, 'bgm.mp3')
+            # Prefer user-provided bgm files; do not synthesize fallbacks
             bgm_path = None
-            if os.path.exists(preferred_bgm):
-                bgm_path = preferred_bgm
-            else:
-                try:
-                    # Fallback: ensure or synthesize urgent_bgm.wav
-                    from audio import ensure_urgent_bgm
-                    bgm_path = ensure_urgent_bgm(os.path.join(sounds_base, 'urgent_bgm.wav'))
-                except Exception:
-                    bgm_path = None
+            for candidate in ('bgm.mp3', 'bgm.wav'):
+                p = os.path.join(sounds_base, candidate)
+                if os.path.exists(p):
+                    bgm_path = p
+                    break
             if bgm_path:
                 try:
                     pygame.mixer.music.load(bgm_path)
@@ -103,7 +98,7 @@ class Game:
 
             if os.path.exists(p):
                 try:
-                    # try a short fadeout of any current music (urgent_bgm)
+                    # try a short fadeout of any current music
                     try:
                         pygame.mixer.music.fadeout(400)
                     except Exception:
@@ -327,36 +322,17 @@ class Game:
                     self._play_ending_music('success.wav', loop=False)
                 except Exception:
                     pass
-                # show success UI with can image
-                draw_level_result(self.screen, self.font, f"Congratulations! You got a {reward.get('type', 'can')}", success=True, reward_image=reward_img)
-                # advance to next level if available
-                if self.level_index + 1 < len(LEVELS):
-                    self.level_index += 1
-                    self.level = LEVELS[self.level_index]
-                    # reset timers: start_ticks and level_end_time based on now
-                    self.start_ticks = pygame.time.get_ticks()
-                    self.level_end_time = self.start_ticks + (self.level['time_seconds'] * 1000)
-                    self.level_active = True
-                    # clear drops to give the player a fresh start for next level
-                    self.drops.clear()
-                    # show level start hint for the new level
-                    try:
-                        from ui import draw_level_start_hint
-                        reward = self.level.get('reward', {})
-                        reward_img = None
-                        import os
-                        base = os.path.join(os.path.dirname(__file__), '..', 'assets')
-                        p = os.path.join(base, reward.get('image', CAN_IMAGE))
-                        if os.path.exists(p):
-                            reward_img = pygame.image.load(p).convert_alpha()
-                        draw_level_start_hint(self.screen, self.font, self.level.get('coins_required', 0), reward.get('type', 'can'), reward_image=reward_img)
-                    except Exception:
-                        pass
-                else:
-                    # no more levels: end game — show back-to-menu overlay
-                    self._show_back_to_menu("All levels cleared!", (0, 220, 0))
-                    self.running = False
-                    return
+                # show success UI with can image (humanize reward type for display)
+                try:
+                    _rtype = reward.get('type', 'can')
+                    _rtype_disp = str(_rtype).replace('_', ' ').strip()
+                except Exception:
+                    _rtype_disp = 'can'
+                draw_level_result(self.screen, self.font, f"Congratulations! You got a {_rtype_disp}", success=True, reward_image=reward_img)
+                # single-level flow: finish and show back-to-menu overlay (no message)
+                self._show_back_to_menu("", (0, 220, 0))
+                self.running = False
+                return
             else:
                 # failure: play failure music then show message
                 try:
